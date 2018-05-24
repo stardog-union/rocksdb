@@ -138,9 +138,11 @@ void RWMutex::WriteUnlock() { PthreadCall("write unlock", pthread_rwlock_unlock(
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
+#define ROCKSDB_SCHED_GETCPU_PRESENT_DEFINED defined(ROCKSDB_SCHED_GETCPU_PRESENT)
 
 int PhysicalCoreID() {
  #pragma message "content of ROCKSDB_SCHED_GETCPU_PRESENT: " STR(ROCKSDB_SCHED_GETCPU_PRESENT)
+ #pragma message "content of ROCKSDB_SCHED_GETCPU_PRESENT_DEFINED: " STR(ROCKSDB_SCHED_GETCPU_PRESENT_DEFINED)
  #pragma message "content of __x86_64__: " STR(__x86_64__)
  #pragma message "content of __GNUC__: " STR(__GNUC__)
  #pragma message "content of __GNUC_MINOR__: " STR(__GNUC_MINOR__)
