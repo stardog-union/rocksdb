@@ -18,6 +18,7 @@
 #include <string>
 #include <algorithm>
 #include <limits>
+#include <iostream>
 
 #include "db/compaction_picker.h"
 #include "db/compaction_picker_universal.h"
@@ -1235,6 +1236,11 @@ ColumnFamilySet::~ColumnFamilySet() {
     auto cfd = column_family_data_.begin()->second;
     bool last_ref __attribute__((__unused__));
     last_ref = cfd->Unref();
+
+    if (!last_ref) {
+        std::cout << " Assertion error "+cfd->name_+"\n\n";
+    }
+
     assert(last_ref);
     delete cfd;
   }
