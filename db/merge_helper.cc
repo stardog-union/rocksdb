@@ -62,21 +62,12 @@ Status MergeHelper::TimedFullMerge(const MergeOperator* merge_operator,
     return Status::OK();
   }
 
-  if (update_num_ops_stats) {
-    MeasureTime(statistics, READ_NUM_MERGE_OPERANDS,
-                static_cast<uint64_t>(operands.size()));
-  }
-
   bool success;
   Slice tmp_result_operand(nullptr, 0);
   const MergeOperator::MergeOperationInput merge_in(key, value, operands,
                                                     logger);
   MergeOperator::MergeOperationOutput merge_out(*result, tmp_result_operand);
   {
-    // Setup to time the merge
-    StopWatchNano timer(env, statistics != nullptr);
-    PERF_TIMER_GUARD(merge_operator_time_nanos);
-
     // Do the merge
     success = merge_operator->FullMergeV2(merge_in, &merge_out);
 
@@ -90,9 +81,6 @@ Status MergeHelper::TimedFullMerge(const MergeOperator* merge_operator,
     } else if (result_operand) {
       *result_operand = Slice(nullptr, 0);
     }
-
-    RecordTick(statistics, MERGE_OPERATION_TOTAL_TIME,
-               statistics ? timer.ElapsedNanos() : 0);
   }
 
   if (!success) {
