@@ -922,7 +922,7 @@ class PosixEnv : public Env {
     return static_cast<uint64_t>(ts.tv_sec) * 1000000000 + ts.tv_nsec;
 #elif defined(OS_SOLARIS)
     return gethrtime();
-#elif defined(__MACH__)
+#elif defined(__MACH__) && !defined(__APPLE__)
     clock_serv_t cclock;
     mach_timespec_t ts;
     host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
