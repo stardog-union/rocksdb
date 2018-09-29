@@ -18,20 +18,20 @@
 #include "util/compression_context_cache.h"
 
 #ifdef SNAPPY
-#include <snappy.h>
+#include "snappy.h"
 #endif
 
 #ifdef ZLIB
-#include <zlib.h>
+#include "zlib.h"
 #endif
 
 #ifdef BZIP2
-#include <bzlib.h>
+#include "bzlib.h"
 #endif
 
 #if defined(LZ4)
-#include <lz4.h>
-#include <lz4hc.h>
+#include "lz4.h"
+#include "lz4hc.h"
 #endif
 
 #if defined(ZSTD)
