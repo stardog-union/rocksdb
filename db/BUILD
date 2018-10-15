@@ -9,6 +9,7 @@ cc_library(
         ":headers",
     ],
     visibility = ["//visibility:public"],
+    alwayslink = 1,
 )
 
 cc_library(
