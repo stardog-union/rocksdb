@@ -21,7 +21,6 @@ PLATFORM_DEFINES = select({
     ],
     "//:windows": [
         "OS_WIN",
-        "ROCKSDB_PLATFORM_POSIX",
     ],
     "//conditions:default": [],
 })
