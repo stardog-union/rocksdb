@@ -8,17 +8,17 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 #include "table/block_fetcher.h"
-
-#include <string>
 #include <inttypes.h>
+#include <string>
+#include "rocksdb/pool_ptr.h"
 
 #include "monitoring/perf_context_imp.h"
 #include "monitoring/statistics.h"
 #include "rocksdb/env.h"
 #include "table/block.h"
 #include "table/block_based_table_reader.h"
-#include "table/persistent_cache_helper.h"
 #include "table/format.h"
+#include "table/persistent_cache_helper.h"
 #include "util/coding.h"
 #include "util/compression.h"
 #include "util/crc32c.h"
@@ -127,8 +127,9 @@ void BlockFetcher::PrepareBufferForBlockFromFile() {
     // trivially allocated stack buffer instead of needing a full malloc()
     used_buf_ = &stack_buf_[0];
   } else {
-    heap_buf_ =
-        std::unique_ptr<char[]>(new char[block_size_ + kBlockTrailerSize]);
+    heap_buf_.reset(
+        // new char[block_size_ + kBlockTrailerSize]
+        MemoryPoolSize::instance()->allocate(block_size_ + kBlockTrailerSize));
     used_buf_ = heap_buf_.get();
   }
 }
@@ -161,7 +162,9 @@ void BlockFetcher::GetBlockContents() {
   } else {
     // page is uncompressed, the buffer either stack or heap provided
     if (got_from_prefetch_buffer_ || used_buf_ == &stack_buf_[0]) {
-      heap_buf_ = std::unique_ptr<char[]>(new char[block_size_]);
+      char* aBuffer = MemoryPoolSize::instance()->allocate(block_size_);
+      // new char[block_size_];
+      heap_buf_.reset(aBuffer);
       memcpy(heap_buf_.get(), used_buf_, block_size_);
     }
     *contents_ = BlockContents(std::move(heap_buf_), block_size_, true,

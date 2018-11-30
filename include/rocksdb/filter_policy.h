@@ -20,11 +20,12 @@
 #ifndef STORAGE_ROCKSDB_INCLUDE_FILTER_POLICY_H_
 #define STORAGE_ROCKSDB_INCLUDE_FILTER_POLICY_H_
 
+#include <stdlib.h>
 #include <memory>
 #include <stdexcept>
-#include <stdlib.h>
 #include <string>
 #include <vector>
+#include "rocksdb/pool_ptr.h"
 
 namespace rocksdb {
 
@@ -43,12 +44,12 @@ class FilterBitsBuilder {
   // Generate the filter using the keys that are added
   // The return value of this function would be the filter bits,
   // The ownership of actual data is set to buf
-  virtual Slice Finish(std::unique_ptr<const char[]>* buf) = 0;
+  virtual Slice Finish(pool_ptr* buf) = 0;
 
   // Calculate num of entries fit into a space.
 #if defined(_MSC_VER)
 #pragma warning(push)
-#pragma warning(disable : 4702) // unreachable code
+#pragma warning(disable : 4702)  // unreachable code
 #endif
   virtual int CalculateNumEntry(const uint32_t /*space*/) {
 #ifndef ROCKSDB_LITE
@@ -103,8 +104,8 @@ class FilterPolicy {
   //
   // Warning: do not change the initial contents of *dst.  Instead,
   // append the newly constructed filter to *dst.
-  virtual void CreateFilter(const Slice* keys, int n, std::string* dst)
-      const = 0;
+  virtual void CreateFilter(const Slice* keys, int n,
+                            std::string* dst) const = 0;
 
   // "filter" contains the data appended by a preceding call to
   // CreateFilter() on this class.  This method must return true if
@@ -115,9 +116,7 @@ class FilterPolicy {
 
   // Get the FilterBitsBuilder, which is ONLY used for full filter block
   // It contains interface to take individual key, then generate filter
-  virtual FilterBitsBuilder* GetFilterBitsBuilder() const {
-    return nullptr;
-  }
+  virtual FilterBitsBuilder* GetFilterBitsBuilder() const { return nullptr; }
 
   // Get the FilterBitsReader, which is ONLY used for full filter block
   // It contains interface to tell if key can be in filter
@@ -146,8 +145,8 @@ class FilterPolicy {
 // ignores trailing spaces, it would be incorrect to use a
 // FilterPolicy (like NewBloomFilterPolicy) that does not ignore
 // trailing spaces in keys.
-extern const FilterPolicy* NewBloomFilterPolicy(int bits_per_key,
-    bool use_block_based_builder = true);
-}
+extern const FilterPolicy* NewBloomFilterPolicy(
+    int bits_per_key, bool use_block_based_builder = true);
+}  // namespace rocksdb
 
 #endif  // STORAGE_ROCKSDB_INCLUDE_FILTER_POLICY_H_

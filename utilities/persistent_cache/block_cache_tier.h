@@ -6,9 +6,9 @@
 
 #ifndef ROCKSDB_LITE
 
-#ifndef  OS_WIN
+#ifndef OS_WIN
 #include <unistd.h>
-#endif // ! OS_WIN
+#endif  // ! OS_WIN
 
 #include <atomic>
 #include <list>
@@ -58,6 +58,7 @@ class BlockCacheTier : public PersistentCacheTier {
   }
 
   Status Insert(const Slice& key, const char* data, const size_t size) override;
+  Status Lookup(const Slice& key, pool_ptr* data, size_t* size) override;
   Status Lookup(const Slice& key, std::unique_ptr<char[]>* data,
                 size_t* size) override;
   Status Open() override;
@@ -141,14 +142,14 @@ class BlockCacheTier : public PersistentCacheTier {
   port::RWMutex lock_;                          // Synchronization
   const PersistentCacheConfig opt_;             // BlockCache options
   BoundedQueue<InsertOp> insert_ops_;           // Ops waiting for insert
-  rocksdb::port::Thread insert_th_;                       // Insert thread
+  rocksdb::port::Thread insert_th_;             // Insert thread
   uint32_t writer_cache_id_ = 0;                // Current cache file identifier
   WriteableCacheFile* cache_file_ = nullptr;    // Current cache file reference
   CacheWriteBufferAllocator buffer_allocator_;  // Buffer provider
   ThreadedWriter writer_;                       // Writer threads
   BlockCacheTierMetadata metadata_;             // Cache meta data manager
   std::atomic<uint64_t> size_{0};               // Size of the cache
-  Statistics stats_;                                 // Statistics
+  Statistics stats_;                            // Statistics
 };
 
 }  // namespace rocksdb

@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include "rocksdb/pool_ptr.h"
 #include "monitoring/statistics.h"
 #include "table/format.h"
 #include "table/persistent_cache_options.h"
@@ -34,6 +35,11 @@ class PersistentCacheHelper {
                               const BlockHandle& handle,
                               std::unique_ptr<char[]>* raw_data,
                               const size_t raw_data_size);
+
+  static Status LookupRawPage(const PersistentCacheOptions& cache_options,
+                                const BlockHandle& handle,
+                                rocksdb::pool_ptr* raw_data,
+                                const size_t raw_data_size);
 
   // lookup block from uncompressed cache
   static Status LookupUncompressedPage(

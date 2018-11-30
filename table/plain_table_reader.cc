@@ -313,7 +313,7 @@ Status PlainTableReader::PopulateIndex(TableProperties* props,
     // If bloom_block_contents.allocation is not empty (which will be the case
     // for non-mmap mode), it holds the alloated memory for the bloom block.
     // It needs to be kept alive to keep `bloom_block` valid.
-    bloom_block_alloc_ = std::move(bloom_block_contents.allocation);
+    bloom_block_alloc_.reset(bloom_block_contents.allocation.release());
     bloom_block = &bloom_block_contents.data;
   } else {
     bloom_block = nullptr;
@@ -324,7 +324,7 @@ Status PlainTableReader::PopulateIndex(TableProperties* props,
     // If index_block_contents.allocation is not empty (which will be the case
     // for non-mmap mode), it holds the alloated memory for the index block.
     // It needs to be kept alive to keep `index_block` valid.
-    index_block_alloc_ = std::move(index_block_contents.allocation);
+    index_block_alloc_.reset(index_block_contents.allocation.release());
     index_block = &index_block_contents.data;
   } else {
     index_block = nullptr;

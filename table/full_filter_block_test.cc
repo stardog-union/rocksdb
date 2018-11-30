@@ -24,14 +24,13 @@ class TestFilterBitsBuilder : public FilterBitsBuilder {
   }
 
   // Generate the filter using the keys that are added
-  virtual Slice Finish(std::unique_ptr<const char[]>* buf) override {
+  virtual Slice Finish(pool_ptr* buf) override {
     uint32_t len = static_cast<uint32_t>(hash_entries_.size()) * 4;
     char* data = new char[len];
     for (size_t i = 0; i < hash_entries_.size(); i++) {
       EncodeFixed32(data + i * 4, hash_entries_[i]);
     }
-    const char* const_data = data;
-    buf->reset(const_data);
+    buf->reset(data);
     return Slice(data, len);
   }
 
@@ -58,7 +57,6 @@ class TestFilterBitsReader : public FilterBitsReader {
   const char* data_;
   uint32_t len_;
 };
-
 
 class TestHashFilter : public FilterPolicy {
  public:
@@ -87,8 +85,8 @@ class TestHashFilter : public FilterPolicy {
     return new TestFilterBitsBuilder();
   }
 
-  virtual FilterBitsReader* GetFilterBitsReader(const Slice& contents)
-      const override {
+  virtual FilterBitsReader* GetFilterBitsReader(
+      const Slice& contents) const override {
     return new TestFilterBitsReader(contents);
   }
 };

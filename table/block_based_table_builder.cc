@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <include/rocksdb/memory_pool_size.h>
 #include <list>
 #include <map>
 #include <memory>
@@ -40,11 +41,11 @@
 #include "table/meta_blocks.h"
 #include "table/table_builder.h"
 
-#include "util/string_util.h"
 #include "util/coding.h"
 #include "util/compression.h"
 #include "util/crc32c.h"
 #include "util/stop_watch.h"
+#include "util/string_util.h"
 #include "util/xxhash.h"
 
 #include "table/index_builder.h"
@@ -77,9 +78,11 @@ FilterBlockBuilder* CreateFilterBlockBuilder(
       // until index builder actully cuts the partition, we take the lower bound
       // as partition size.
       assert(table_opt.block_size_deviation <= 100);
-      auto partition_size = static_cast<uint32_t>(
-          ((table_opt.metadata_block_size *
-          (100 - table_opt.block_size_deviation)) + 99) / 100);
+      auto partition_size =
+          static_cast<uint32_t>(((table_opt.metadata_block_size *
+                                  (100 - table_opt.block_size_deviation)) +
+                                 99) /
+                                100);
       partition_size = std::max(partition_size, static_cast<uint32_t>(1));
       return new PartitionedFilterBlockBuilder(
           opt.prefix_extractor, table_opt.whole_key_filtering,
@@ -155,10 +158,9 @@ Slice CompressBlock(const Slice& raw,
           GoodCompressionRatio(compressed_output->size(), raw.size())) {
         return *compressed_output;
       }
-      break;     // fall back to no compression.
+      break;  // fall back to no compression.
     case kXpressCompression:
-      if (XPRESS_Compress(raw.data(), raw.size(),
-          compressed_output) &&
+      if (XPRESS_Compress(raw.data(), raw.size(), compressed_output) &&
           GoodCompressionRatio(compressed_output->size(), raw.size())) {
         return *compressed_output;
       }
@@ -335,6 +337,13 @@ struct BlockBasedTableBuilder::Rep {
             table_options.index_type, table_options.whole_key_filtering,
             _ioptions.prefix_extractor != nullptr));
   }
+
+  ~Rep() {
+    if (p_index_builder_!= nullptr) {
+      delete p_index_builder_;
+    }
+  }
+
 };
 
 BlockBasedTableBuilder::BlockBasedTableBuilder(
@@ -361,11 +370,11 @@ BlockBasedTableBuilder::BlockBasedTableBuilder(
     sanitized_table_options.format_version = 1;
   }
 
-  rep_ = new Rep(ioptions, sanitized_table_options, internal_comparator,
-                 int_tbl_prop_collector_factories, column_family_id, file,
-                 compression_type, compression_opts, compression_dict,
-                 skip_filters, column_family_name, creation_time,
-                 oldest_key_time);
+  rep_ =
+      new Rep(ioptions, sanitized_table_options, internal_comparator,
+              int_tbl_prop_collector_factories, column_family_id, file,
+              compression_type, compression_opts, compression_dict,
+              skip_filters, column_family_name, creation_time, oldest_key_time);
 
   if (rep_->filter_builder != nullptr) {
     rep_->filter_builder->StartBlock(0);
@@ -476,8 +485,9 @@ void BlockBasedTableBuilder::WriteBlock(const Slice& raw_block_contents,
   Slice block_contents;
   bool abort_compression = false;
 
-  StopWatchNano timer(r->ioptions.env,
-    ShouldReportDetailedTime(r->ioptions.env, r->ioptions.statistics));
+  StopWatchNano timer(
+      r->ioptions.env,
+      ShouldReportDetailedTime(r->ioptions.env, r->ioptions.statistics));
 
   if (raw_block_contents.size() < kCompressionSizeLimit) {
     Slice compression_dict;
@@ -497,8 +507,7 @@ void BlockBasedTableBuilder::WriteBlock(const Slice& raw_block_contents,
       BlockContents contents;
       Status stat = UncompressBlockContentsForCompressionType(
           block_contents.data(), block_contents.size(), &contents,
-          r->table_options.format_version, compression_dict, type,
-          r->ioptions);
+          r->table_options.format_version, compression_dict, type, r->ioptions);
 
       if (stat.ok()) {
         bool compressed_ok = contents.data.compare(raw_block_contents) == 0;
@@ -585,9 +594,7 @@ void BlockBasedTableBuilder::WriteRawBlock(const Slice& block_contents,
   }
 }
 
-Status BlockBasedTableBuilder::status() const {
-  return rep_->status;
-}
+Status BlockBasedTableBuilder::status() const { return rep_->status; }
 
 static void DeleteCachedBlock(const Slice& /*key*/, void* value) {
   Block* block = reinterpret_cast<Block*>(value);
@@ -604,7 +611,6 @@ Status BlockBasedTableBuilder::InsertBlockInCache(const Slice& block_contents,
   Cache* block_cache_compressed = r->table_options.block_cache_compressed.get();
 
   if (type != kNoCompression && block_cache_compressed != nullptr) {
-
     size_t size = block_contents.size();
 
     std::unique_ptr<char[]> ubuf(new char[size + 1]);
@@ -617,11 +623,10 @@ Status BlockBasedTableBuilder::InsertBlockInCache(const Slice& block_contents,
 
     // make cache key by appending the file offset to the cache prefix id
     char* end = EncodeVarint64(
-                  r->compressed_cache_key_prefix +
-                  r->compressed_cache_key_prefix_size,
-                  handle->offset());
-    Slice key(r->compressed_cache_key_prefix, static_cast<size_t>
-              (end - r->compressed_cache_key_prefix));
+        r->compressed_cache_key_prefix + r->compressed_cache_key_prefix_size,
+        handle->offset());
+    Slice key(r->compressed_cache_key_prefix,
+              static_cast<size_t>(end - r->compressed_cache_key_prefix));
 
     // Insert into compressed block cache.
     block_cache_compressed->Insert(key, block, block->usable_size(),
@@ -707,8 +712,9 @@ Status BlockBasedTableBuilder::Finish() {
       PropertyBlockBuilder property_block_builder;
       r->props.column_family_id = r->column_family_id;
       r->props.column_family_name = r->column_family_name;
-      r->props.filter_policy_name = r->table_options.filter_policy != nullptr ?
-          r->table_options.filter_policy->Name() : "";
+      r->props.filter_policy_name = r->table_options.filter_policy != nullptr
+                                        ? r->table_options.filter_policy->Name()
+                                        : "";
       r->props.index_size =
           r->index_builder->EstimatedSize() + kBlockTrailerSize;
       r->props.comparator_name = r->ioptions.user_comparator != nullptr
@@ -753,11 +759,8 @@ Status BlockBasedTableBuilder::Finish() {
                                            &property_block_builder);
 
       BlockHandle properties_block_handle;
-      WriteRawBlock(
-          property_block_builder.Finish(),
-          kNoCompression,
-          &properties_block_handle
-      );
+      WriteRawBlock(property_block_builder.Finish(), kNoCompression,
+                    &properties_block_handle);
       meta_index_builder.Add(kPropertiesBlock, properties_block_handle);
 
       // Write compression dictionary block
@@ -847,9 +850,7 @@ uint64_t BlockBasedTableBuilder::NumEntries() const {
   return rep_->props.num_entries;
 }
 
-uint64_t BlockBasedTableBuilder::FileSize() const {
-  return rep_->offset;
-}
+uint64_t BlockBasedTableBuilder::FileSize() const { return rep_->offset; }
 
 bool BlockBasedTableBuilder::NeedCompact() const {
   for (const auto& collector : rep_->table_properties_collectors) {

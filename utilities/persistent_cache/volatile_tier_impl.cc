@@ -79,6 +79,32 @@ Status VolatileCacheTier::Insert(const Slice& page_key, const char* data,
   return Status::OK();
 }
 
+Status VolatileCacheTier::Lookup(const Slice& page_key, pool_ptr* result,
+                                 size_t* size) {
+  CacheData key(std::move(page_key.ToString()));
+  CacheData* kv;
+  bool ok = index_.Find(&key, &kv);
+  if (ok) {
+    // set return data
+    result->reset(new char[kv->value.size()]);
+    memcpy(result->get(), kv->value.c_str(), kv->value.size());
+    *size = kv->value.size();
+    // drop the reference on cache data
+    kv->refs_--;
+    // update stats
+    stats_.cache_hits_++;
+    return Status::OK();
+  }
+
+  stats_.cache_misses_++;
+
+  if (next_tier()) {
+    return next_tier()->Lookup(page_key, result, size);
+  }
+
+  return Status::NotFound("key not found in volatile cache");
+}
+
 Status VolatileCacheTier::Lookup(const Slice& page_key,
                                  std::unique_ptr<char[]>* result,
                                  size_t* size) {

@@ -19,6 +19,7 @@
 #include <sys/mman.h>
 #endif
 #include <algorithm>
+#include <include/rocksdb/memory_pool_size.h>
 #include "port/port.h"
 #include "rocksdb/env.h"
 #include "util/logging.h"
@@ -74,7 +75,8 @@ Arena::~Arena() {
     tracker_->FreeMem();
   }
   for (const auto& block : blocks_) {
-    delete[] block;
+    MemoryPoolSize::instance()->release(block);
+    //delete[] block;
   }
 
 #ifdef MAP_HUGETLB
@@ -209,7 +211,7 @@ char* Arena::AllocateNewBlock(size_t block_bytes) {
   //   via RAII.
   blocks_.emplace_back(nullptr);
 
-  char* block = new char[block_bytes];
+  char* block = MemoryPoolSize::instance()->allocate(block_bytes);
   size_t allocated_size;
 #ifdef ROCKSDB_MALLOC_USABLE_SIZE
   allocated_size = malloc_usable_size(block);

@@ -133,7 +133,7 @@ Status BlockCacheTier::Close() {
   return Status::OK();
 }
 
-template<class T>
+template <class T>
 void Add(std::map<std::string, double>* stats, const std::string& key,
          const T& t) {
   stats->insert({key, static_cast<double>(t)});
@@ -149,8 +149,7 @@ PersistentCache::StatsType BlockCacheTier::Stats() {
       stats_.bytes_read_.Average());
   Add(&stats, "persistentcache.blockcachetier.insert_dropped",
       stats_.insert_dropped_);
-  Add(&stats, "persistentcache.blockcachetier.cache_hits",
-      stats_.cache_hits_);
+  Add(&stats, "persistentcache.blockcachetier.cache_hits", stats_.cache_hits_);
   Add(&stats, "persistentcache.blockcachetier.cache_misses",
       stats_.cache_misses_);
   Add(&stats, "persistentcache.blockcachetier.cache_errors",
@@ -222,7 +221,7 @@ Status BlockCacheTier::InsertImpl(const Slice& key, const Slice& data) {
   assert(data.size());
   assert(cache_file_);
 
-  StopWatchNano timer(opt_.env, /*auto_start=*/ true);
+  StopWatchNano timer(opt_.env, /*auto_start=*/true);
 
   WriteLock _(&lock_);
 
@@ -263,9 +262,59 @@ Status BlockCacheTier::InsertImpl(const Slice& key, const Slice& data) {
   return Status::OK();
 }
 
+Status BlockCacheTier::Lookup(const Slice& page_key, pool_ptr* val,
+                              size_t* size) {
+  StopWatchNano timer(opt_.env, /*auto_start=*/true);
+
+  LBA lba;
+  bool status;
+  status = metadata_.Lookup(page_key, &lba);
+  if (!status) {
+    stats_.cache_misses_++;
+    stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
+    return Status::NotFound("blockcache: key not found");
+  }
+
+  BlockCacheFile* const file = metadata_.Lookup(lba.cache_id_);
+  if (!file) {
+    // this can happen because the block index and cache file index are
+    // different, and the cache file might be removed between the two lookups
+    stats_.cache_misses_++;
+    stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
+    return Status::NotFound("blockcache: cache file not found");
+  }
+
+  assert(file->refs_);
+
+  unique_ptr<char[]> scratch(new char[lba.size_]);
+  Slice blk_key;
+  Slice blk_val;
+
+  status = file->Read(lba, &blk_key, &blk_val, scratch.get());
+  --file->refs_;
+  if (!status) {
+    stats_.cache_misses_++;
+    stats_.cache_errors_++;
+    stats_.read_miss_latency_.Add(timer.ElapsedNanos() / 1000);
+    return Status::NotFound("blockcache: error reading data");
+  }
+
+  assert(blk_key == page_key);
+
+  val->reset(new char[blk_val.size()]);
+  memcpy(val->get(), blk_val.data(), blk_val.size());
+  *size = blk_val.size();
+
+  stats_.bytes_read_.Add(*size);
+  stats_.cache_hits_++;
+  stats_.read_hit_latency_.Add(timer.ElapsedNanos() / 1000);
+
+  return Status::OK();
+}
+
 Status BlockCacheTier::Lookup(const Slice& key, unique_ptr<char[]>* val,
                               size_t* size) {
-  StopWatchNano timer(opt_.env, /*auto_start=*/ true);
+  StopWatchNano timer(opt_.env, /*auto_start=*/true);
 
   LBA lba;
   bool status;
@@ -327,10 +376,9 @@ Status BlockCacheTier::NewCacheFile() {
   TEST_SYNC_POINT_CALLBACK("BlockCacheTier::NewCacheFile:DeleteDir",
                            (void*)(GetCachePath().c_str()));
 
-  std::unique_ptr<WriteableCacheFile> f(
-    new WriteableCacheFile(opt_.env, &buffer_allocator_, &writer_,
-                           GetCachePath(), writer_cache_id_,
-                           opt_.cache_file_size, opt_.log));
+  std::unique_ptr<WriteableCacheFile> f(new WriteableCacheFile(
+      opt_.env, &buffer_allocator_, &writer_, GetCachePath(), writer_cache_id_,
+      opt_.cache_file_size, opt_.log));
 
   bool status = f->Create(opt_.enable_direct_writes, opt_.enable_direct_reads);
   if (!status) {

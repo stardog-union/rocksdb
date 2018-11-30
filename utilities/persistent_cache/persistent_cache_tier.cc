@@ -13,8 +13,8 @@
 
 #include "inttypes.h"
 
-#include <string>
 #include <sstream>
+#include <string>
 
 namespace rocksdb {
 
@@ -146,6 +146,12 @@ Status PersistentTieredCache::Insert(const Slice& page_key, const char* data,
 
 Status PersistentTieredCache::Lookup(const Slice& page_key,
                                      std::unique_ptr<char[]>* data,
+                                     size_t* size) {
+  assert(!tiers_.empty());
+  return tiers_.front()->Lookup(page_key, data, size);
+}
+
+Status PersistentTieredCache::Lookup(const Slice& page_key, pool_ptr* data,
                                      size_t* size) {
   assert(!tiers_.empty());
   return tiers_.front()->Lookup(page_key, data, size);

@@ -8,6 +8,8 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 #pragma once
+
+#include "rocksdb/pool_ptr.h"
 #include "table/block.h"
 #include "table/format.h"
 
@@ -23,8 +25,7 @@ class BlockFetcher {
   BlockFetcher(RandomAccessFileReader* file,
                FilePrefetchBuffer* prefetch_buffer, const Footer& footer,
                const ReadOptions& read_options, const BlockHandle& handle,
-               BlockContents* contents,
-               const ImmutableCFOptions& ioptions,
+               BlockContents* contents, const ImmutableCFOptions& ioptions,
                bool do_uncompress, const Slice& compression_dict,
                const PersistentCacheOptions& cache_options)
       : file_(file),
@@ -56,7 +57,7 @@ class BlockFetcher {
   Slice slice_;
   char* used_buf_ = nullptr;
   size_t block_size_;
-  std::unique_ptr<char[]> heap_buf_;
+  pool_ptr heap_buf_;
   char stack_buf_[kDefaultStackBufferSize];
   bool got_from_prefetch_buffer_ = false;
   rocksdb::CompressionType compression_type;

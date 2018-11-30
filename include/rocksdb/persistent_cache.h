@@ -12,10 +12,10 @@
 #include <string>
 
 #include "rocksdb/env.h"
+#include "rocksdb/pool_ptr.h"
 #include "rocksdb/slice.h"
 #include "rocksdb/statistics.h"
 #include "rocksdb/status.h"
-
 namespace rocksdb {
 
 // PersistentCache
@@ -43,6 +43,8 @@ class PersistentCache {
   // size       Size of the page
   virtual Status Lookup(const Slice& key, std::unique_ptr<char[]>* data,
                         size_t* size) = 0;
+
+  virtual Status Lookup(const Slice& key, pool_ptr* data, size_t* size) = 0;
 
   // Is cache storing uncompressed data ?
   //

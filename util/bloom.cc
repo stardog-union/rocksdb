@@ -9,6 +9,7 @@
 
 #include "rocksdb/filter_policy.h"
 
+#include "rocksdb/memory_pool_size.h"
 #include "rocksdb/slice.h"
 #include "table/block_based_filter_block.h"
 #include "table/full_filter_bits_builder.h"
@@ -25,37 +26,35 @@ FullFilterBitsBuilder::FullFilterBitsBuilder(const size_t bits_per_key,
                                              const size_t num_probes)
     : bits_per_key_(bits_per_key), num_probes_(num_probes) {
   assert(bits_per_key_);
+}
+
+FullFilterBitsBuilder::~FullFilterBitsBuilder() {}
+
+void FullFilterBitsBuilder::AddKey(const Slice& key) {
+  uint32_t hash = BloomHash(key);
+  if (hash_entries_.size() == 0 || hash != hash_entries_.back()) {
+    hash_entries_.push_back(hash);
   }
+}
 
-  FullFilterBitsBuilder::~FullFilterBitsBuilder() {}
+Slice FullFilterBitsBuilder::Finish(pool_ptr* buf) {
+  uint32_t total_bits, num_lines;
+  char* data = ReserveSpace(static_cast<int>(hash_entries_.size()), &total_bits,
+                            &num_lines);
+  assert(data);
 
-  void FullFilterBitsBuilder::AddKey(const Slice& key) {
-    uint32_t hash = BloomHash(key);
-    if (hash_entries_.size() == 0 || hash != hash_entries_.back()) {
-      hash_entries_.push_back(hash);
+  if (total_bits != 0 && num_lines != 0) {
+    for (auto h : hash_entries_) {
+      AddHash(h, data, num_lines, total_bits);
     }
   }
+  data[total_bits / 8] = static_cast<char>(num_probes_);
+  EncodeFixed32(data + total_bits / 8 + 1, static_cast<uint32_t>(num_lines));
+  buf->reset(data);
+  hash_entries_.clear();
 
-  Slice FullFilterBitsBuilder::Finish(std::unique_ptr<const char[]>* buf) {
-    uint32_t total_bits, num_lines;
-    char* data = ReserveSpace(static_cast<int>(hash_entries_.size()),
-                              &total_bits, &num_lines);
-    assert(data);
-
-    if (total_bits != 0 && num_lines != 0) {
-      for (auto h : hash_entries_) {
-        AddHash(h, data, num_lines, total_bits);
-      }
-    }
-    data[total_bits/8] = static_cast<char>(num_probes_);
-    EncodeFixed32(data + total_bits/8 + 1, static_cast<uint32_t>(num_lines));
-
-    const char* const_data = data;
-    buf->reset(const_data);
-    hash_entries_.clear();
-
-    return Slice(data, total_bits / 8 + 5);
-  }
+  return Slice(data, total_bits / 8 + 5);
+}
 
 uint32_t FullFilterBitsBuilder::GetTotalBitsForLocality(uint32_t total_bits) {
   uint32_t num_lines =
@@ -95,7 +94,7 @@ char* FullFilterBitsBuilder::ReserveSpace(const int num_entry,
                                           uint32_t* total_bits,
                                           uint32_t* num_lines) {
   uint32_t sz = CalculateSpace(num_entry, total_bits, num_lines);
-  char* data = new char[sz];
+  char* data = MemoryPoolSize::instance()->allocate(sz);
   memset(data, 0, sz);
   return data;
 }
@@ -104,7 +103,7 @@ int FullFilterBitsBuilder::CalculateNumEntry(const uint32_t space) {
   assert(bits_per_key_);
   assert(space > 0);
   uint32_t dont_care1, dont_care2;
-  int high = (int) (space * 8 / bits_per_key_ + 1);
+  int high = (int)(space * 8 / bits_per_key_ + 1);
   int low = 1;
   int n = high;
   for (; n >= low; n--) {
@@ -118,7 +117,8 @@ int FullFilterBitsBuilder::CalculateNumEntry(const uint32_t space) {
 }
 
 inline void FullFilterBitsBuilder::AddHash(uint32_t h, char* data,
-    uint32_t num_lines, uint32_t total_bits) {
+                                           uint32_t num_lines,
+                                           uint32_t total_bits) {
   assert(num_lines > 0 && total_bits > 0);
 
   const uint32_t delta = (h >> 17) | (h << 15);  // Rotate right 17 bits
@@ -145,7 +145,7 @@ class FullFilterBitsReader : public FilterBitsReader {
     assert(data_);
     GetFilterMeta(contents, &num_probes_, &num_lines_);
     // Sanitize broken parameter
-    if (num_lines_ != 0 && (data_len_-5) % num_lines_ != 0) {
+    if (num_lines_ != 0 && (data_len_ - 5) % num_lines_ != 0) {
       num_lines_ = 0;
       num_probes_ = 0;
     }
@@ -154,14 +154,13 @@ class FullFilterBitsReader : public FilterBitsReader {
   ~FullFilterBitsReader() {}
 
   virtual bool MayMatch(const Slice& entry) override {
-    if (data_len_ <= 5) {   // remain same with original filter
+    if (data_len_ <= 5) {  // remain same with original filter
       return false;
     }
     // Other Error params, including a broken filter, regarded as match
     if (num_probes_ == 0 || num_lines_ == 0) return true;
     uint32_t hash = BloomHash(entry);
-    return HashMayMatch(hash, Slice(data_, data_len_),
-                        num_probes_, num_lines_);
+    return HashMayMatch(hash, Slice(data_, data_len_), num_probes_, num_lines_);
   }
 
  private:
@@ -174,7 +173,7 @@ class FullFilterBitsReader : public FilterBitsReader {
   // Get num_probes, and num_lines from filter
   // If filter format broken, set both to 0.
   void GetFilterMeta(const Slice& filter, size_t* num_probes,
-                             uint32_t* num_lines);
+                     uint32_t* num_lines);
 
   // "filter" contains the data appended by a preceding call to
   // CreateFilterFromHash() on this class.  This method must return true if
@@ -189,7 +188,7 @@ class FullFilterBitsReader : public FilterBitsReader {
   // Before calling this function, need to ensure the input meta data
   // is valid.
   bool HashMayMatch(const uint32_t& hash, const Slice& filter,
-      const size_t& num_probes, const uint32_t& num_lines);
+                    const size_t& num_probes, const uint32_t& num_lines);
 
   // No Copy allowed
   FullFilterBitsReader(const FullFilterBitsReader&);
@@ -197,7 +196,8 @@ class FullFilterBitsReader : public FilterBitsReader {
 };
 
 void FullFilterBitsReader::GetFilterMeta(const Slice& filter,
-    size_t* num_probes, uint32_t* num_lines) {
+                                         size_t* num_probes,
+                                         uint32_t* num_lines) {
   uint32_t len = static_cast<uint32_t>(filter.size());
   if (len <= 5) {
     // filter is empty or broken
@@ -211,8 +211,9 @@ void FullFilterBitsReader::GetFilterMeta(const Slice& filter,
 }
 
 bool FullFilterBitsReader::HashMayMatch(const uint32_t& hash,
-    const Slice& filter, const size_t& num_probes,
-    const uint32_t& num_lines) {
+                                        const Slice& filter,
+                                        const size_t& num_probes,
+                                        const uint32_t& num_lines) {
   uint32_t len = static_cast<uint32_t>(filter.size());
   if (len <= 5) return false;  // remain the same with original filter
 
@@ -244,13 +245,13 @@ bool FullFilterBitsReader::HashMayMatch(const uint32_t& hash,
 class BloomFilterPolicy : public FilterPolicy {
  public:
   explicit BloomFilterPolicy(int bits_per_key, bool use_block_based_builder)
-      : bits_per_key_(bits_per_key), hash_func_(BloomHash),
+      : bits_per_key_(bits_per_key),
+        hash_func_(BloomHash),
         use_block_based_builder_(use_block_based_builder) {
     initialize();
   }
 
-  ~BloomFilterPolicy() {
-  }
+  ~BloomFilterPolicy() {}
 
   virtual const char* Name() const override {
     return "rocksdb.BuiltinBloomFilter";
@@ -279,7 +280,7 @@ class BloomFilterPolicy : public FilterPolicy {
       const uint32_t delta = (h >> 17) | (h << 15);  // Rotate right 17 bits
       for (size_t j = 0; j < num_probes_; j++) {
         const uint32_t bitpos = h % bits;
-        array[bitpos/8] |= (1 << (bitpos % 8));
+        array[bitpos / 8] |= (1 << (bitpos % 8));
         h += delta;
       }
     }
@@ -295,7 +296,7 @@ class BloomFilterPolicy : public FilterPolicy {
 
     // Use the encoded k so that we can read filters generated by
     // bloom filters created using different parameters.
-    const size_t k = array[len-1];
+    const size_t k = array[len - 1];
     if (k > 30) {
       // Reserved for potentially new encodings for short bloom filters.
       // Consider it a match.
@@ -306,7 +307,7 @@ class BloomFilterPolicy : public FilterPolicy {
     const uint32_t delta = (h >> 17) | (h << 15);  // Rotate right 17 bits
     for (size_t j = 0; j < k; j++) {
       const uint32_t bitpos = h % bits;
-      if ((array[bitpos/8] & (1 << (bitpos % 8))) == 0) return false;
+      if ((array[bitpos / 8] & (1 << (bitpos % 8))) == 0) return false;
       h += delta;
     }
     return true;
@@ -320,8 +321,8 @@ class BloomFilterPolicy : public FilterPolicy {
     return new FullFilterBitsBuilder(bits_per_key_, num_probes_);
   }
 
-  virtual FilterBitsReader* GetFilterBitsReader(const Slice& contents)
-      const override {
+  virtual FilterBitsReader* GetFilterBitsReader(
+      const Slice& contents) const override {
     return new FullFilterBitsReader(contents);
   }
 

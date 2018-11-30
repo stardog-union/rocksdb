@@ -60,7 +60,7 @@ class FullFilterBlockBuilder : public FilterBlockBuilder {
   bool whole_key_filtering_;
 
   uint32_t num_added_;
-  std::unique_ptr<const char[]> filter_data_;
+  pool_ptr filter_data_;
 
   void AddPrefix(const Slice& key);
 

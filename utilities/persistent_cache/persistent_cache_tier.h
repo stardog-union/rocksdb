@@ -261,6 +261,10 @@ class PersistentCacheTier : public PersistentCache {
   virtual Status Lookup(const Slice& page_key, std::unique_ptr<char[]>* data,
                         size_t* size) = 0;
 
+  // Lookup page cache by page identifier
+  virtual Status Lookup(const Slice& page_key, pool_ptr* data,
+                        size_t* size) = 0;
+
   // Does it store compressed data ?
   virtual bool IsCompressed() = 0;
 
@@ -303,6 +307,9 @@ class PersistentTieredCache : public PersistentCacheTier {
                 const size_t size) override;
   Status Lookup(const Slice& page_key, std::unique_ptr<char[]>* data,
                 size_t* size) override;
+
+  Status Lookup(const Slice& page_key, pool_ptr* data, size_t* size) override;
+
   bool IsCompressed() override;
 
   std::string GetPrintableOptions() const override {

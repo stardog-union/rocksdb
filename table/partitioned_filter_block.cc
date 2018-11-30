@@ -42,7 +42,8 @@ void PartitionedFilterBlockBuilder::MaybeCutAFilterBlock() {
   if (!p_index_builder_->ShouldCutFilterBlock()) {
     return;
   }
-  filter_gc.push_back(std::unique_ptr<const char[]>(nullptr));
+  pool_ptr aPtr{};
+  filter_gc.emplace_back(std::move(aPtr));
   Slice filter = filter_bits_builder_->Finish(&filter_gc.back());
   std::string& index_key = p_index_builder_->GetPartitionKey();
   filters.push_back({index_key, filter});
@@ -287,7 +288,7 @@ void PartitionedFilterBlockReader::CacheDependencies(bool pin) {
   auto& file = table_->rep_->file;
   prefetch_buffer.reset(new FilePrefetchBuffer());
   s = prefetch_buffer->Prefetch(file.get(), prefetch_off,
-    static_cast<size_t>(prefetch_len));
+                                static_cast<size_t>(prefetch_len));
 
   // After prefetch, read the partitions one by one
   biter.SeekToFirst();

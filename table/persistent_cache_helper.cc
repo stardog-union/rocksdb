@@ -48,6 +48,33 @@ void PersistentCacheHelper::InsertUncompressedPage(
 
 Status PersistentCacheHelper::LookupRawPage(
     const PersistentCacheOptions& cache_options, const BlockHandle& handle,
+    rocksdb::pool_ptr* raw_data, const size_t raw_data_size) {
+  assert(cache_options.persistent_cache);
+  assert(cache_options.persistent_cache->IsCompressed());
+
+  // construct the page key
+  char cache_key[BlockBasedTable::kMaxCacheKeyPrefixSize + kMaxVarint64Length];
+  auto key = BlockBasedTable::GetCacheKey(cache_options.key_prefix.c_str(),
+                                          cache_options.key_prefix.size(),
+                                          handle, cache_key);
+  // Lookup page
+  size_t size;
+  Status s = cache_options.persistent_cache->Lookup(key, raw_data, &size);
+  if (!s.ok()) {
+    // cache miss
+    RecordTick(cache_options.statistics, PERSISTENT_CACHE_MISS);
+    return s;
+  }
+
+  // cache hit
+  assert(raw_data_size == handle.size() + kBlockTrailerSize);
+  assert(size == raw_data_size);
+  RecordTick(cache_options.statistics, PERSISTENT_CACHE_HIT);
+  return Status::OK();
+}
+
+Status PersistentCacheHelper::LookupRawPage(
+    const PersistentCacheOptions& cache_options, const BlockHandle& handle,
     std::unique_ptr<char[]>* raw_data, const size_t raw_data_size) {
   assert(cache_options.persistent_cache);
   assert(cache_options.persistent_cache->IsCompressed());

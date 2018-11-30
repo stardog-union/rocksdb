@@ -41,7 +41,7 @@ class FullFilterBitsBuilder : public FilterBitsBuilder {
   // +----------------------------------------------------------------+
   // | ...                | num_probes : 1 byte | num_lines : 4 bytes |
   // +----------------------------------------------------------------+
-  virtual Slice Finish(std::unique_ptr<const char[]>* buf) override;
+  virtual Slice Finish(pool_ptr* buf) override;
 
   // Calculate num of entries fit into a space.
   virtual int CalculateNumEntry(const uint32_t space) override;

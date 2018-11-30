@@ -56,6 +56,9 @@ class VolatileCacheTier : public PersistentCacheTier {
   Status Lookup(const Slice& page_key, std::unique_ptr<char[]>* data,
                 size_t* size) override;
 
+  // lookup key in cache
+  Status Lookup(const Slice& page_key, pool_ptr* data, size_t* size) override;
+
   // is compressed cache ?
   bool IsCompressed() override { return is_compressed_; }
 
