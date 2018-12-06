@@ -1,6 +1,10 @@
 load("//:rocksdb.bzl", "constrained_library", "constrained_test")
 
-EXCLUDED_FILES = ["c.cc", "forward_iterator_bench.cc"]
+EXCLUDED_FILES = [
+    "c.cc",
+    "forward_iterator_bench.cc",
+    "range_del_aggregator_bench.cc",
+]
 
 cc_library(
     name = "db",
