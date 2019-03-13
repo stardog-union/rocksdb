@@ -220,7 +220,7 @@ const std::vector<std::pair<Histograms, std::string>> HistogramsNameMap = {
 };
 
 std::shared_ptr<Statistics> CreateDBStatistics() {
-  return std::make_shared<StatisticsImpl>(nullptr);
+  return std::make_shared<StatisticsImpl>(nullptr, false);
 }
 
 StatisticsImpl::StatisticsImpl(std::shared_ptr<Statistics> stats,
@@ -329,7 +329,7 @@ void StatisticsImpl::setTickerCountLocked(uint32_t tickerType, uint64_t count) {
 
   if (tickerType < TICKER_ENUM_MAX || enable_internal_stats_) {
     tickers_[tickerType].thread_value->Fold(
-        [](void* curr_ptr, void* res) {
+        [](void* curr_ptr, void* /*res*/) {
           static_cast<std::atomic<uint64_t>*>(curr_ptr)->store(
               0, std::memory_order_relaxed);
         },
@@ -395,7 +395,7 @@ Status StatisticsImpl::Reset() {
   }
   for (uint32_t i = 0; i < HISTOGRAM_ENUM_MAX; ++i) {
     histograms_[i].thread_value->Fold(
-        [](void* curr_ptr, void* res) {
+        [](void* curr_ptr, void* /*res*/) {
           static_cast<HistogramImpl*>(curr_ptr)->Clear();
         },
         nullptr /* res */);
