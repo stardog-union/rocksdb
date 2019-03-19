@@ -8,8 +8,11 @@
 #include <atomic>
 #include <vector>
 
+#ifdef ROCKSDB_JEMALLOC
 #include "port/jemalloc_helper.h"
 #include "port/port.h"
+#endif  // ROCKSDB_JEMALLOC
+
 #include "rocksdb/memory_allocator.h"
 #include "util/core_local.h"
 #include "util/thread_local.h"
