@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-ROCKSDB_VERSION="5.10.3"
+ROCKSDB_VERSION="5.18.3"
 ZSTD_VERSION="1.1.3"
 
 echo "This script configures CentOS with everything needed to build and run RocksDB"
@@ -22,7 +22,7 @@ mkdir -pv /usr/local/rocksdb-${ROCKSDB_VERSION}
 ln -sfT /usr/local/rocksdb-${ROCKSDB_VERSION} /usr/local/rocksdb
 
 wget -qO /tmp/zstd-${ZSTD_VERSION}.tar.gz https://github.com/facebook/zstd/archive/v${ZSTD_VERSION}.tar.gz
-wget -qO /tmp/rocksdb-${ROCKSDB_VERSION}.tar.gz https://github.com/facebook/rocksdb/archive/v${ROCKSDB_VERSION}.tar.gz
+wget -qO /tmp/rocksdb-${ROCKSDB_VERSION}.tar.gz https://github.com/stardog-union/rocksdb/archive/v${ROCKSDB_VERSION}.tar.gz
 
 cd /tmp
 
