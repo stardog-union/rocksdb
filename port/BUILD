@@ -36,6 +36,7 @@ COMMON_HDRS = [
     "dirent.h",
     "likely.h",
     "port.h",
+    "jemalloc_helper.h",
     "stack_trace.h",
     "sys_time.h",
     "util_logger.h",
