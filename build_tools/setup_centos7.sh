@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-ROCKSDB_VERSION="5.18.3"
+ROCKSDB_VERSION="5.18.3_debug"
 ZSTD_VERSION="1.1.3"
 
 echo "This script configures CentOS with everything needed to build and run RocksDB"

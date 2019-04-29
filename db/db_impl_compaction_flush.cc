@@ -1188,63 +1188,93 @@ Status DBImpl::ReFitLevel(ColumnFamilyData* cfd, int level, int target_level) {
   }
   refitting_level_ = true;
 
-  const MutableCFOptions mutable_cf_options = *cfd->GetLatestMutableCFOptions();
-  // move to a smaller level
-  int to_level = target_level;
-  if (target_level < 0) {
-    to_level = FindMinimumEmptyLevelFitting(cfd, mutable_cf_options, level);
-  }
+  try {
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "[ReFitLevel] set to true");
 
-  auto* vstorage = cfd->current()->storage_info();
-  if (to_level > level) {
-    if (level == 0) {
-      return Status::NotSupported(
-          "Cannot change from level 0 to other levels.");
-    }
-    // Check levels are empty for a trivial move
-    for (int l = level + 1; l <= to_level; l++) {
-      if (vstorage->NumLevelFiles(l) > 0) {
-        return Status::NotSupported(
-            "Levels between source and target are not empty for a move.");
+      const MutableCFOptions mutable_cf_options = *cfd->GetLatestMutableCFOptions();
+      // move to a smaller level
+      int to_level = target_level;
+      if (target_level < 0) {
+          to_level = FindMinimumEmptyLevelFitting(cfd, mutable_cf_options, level);
+      }
+
+      auto *vstorage = cfd->current()->storage_info();
+      if (to_level > level) {
+          if (level == 0) {
+              ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                             "[ReFitLevel.return] Cannot change from level 0 to other levels.");
+
+              return Status::NotSupported(
+                      "Cannot change from level 0 to other levels.");
+          }
+          // Check levels are empty for a trivial move
+          for (int l = level + 1; l <= to_level; l++) {
+              if (vstorage->NumLevelFiles(l) > 0) {
+                  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                                 "[ReFitLevel.return] Levels between source and target are not empty for a move");
+                  return Status::NotSupported(
+                          "Levels between source and target are not empty for a move.");
+              }
+          }
+      }
+      if (to_level != level) {
+          ROCKS_LOG_DEBUG(immutable_db_options_.info_log,
+                          "[%s] Before refitting:\n%s", cfd->GetName().c_str(),
+                          cfd->current()->DebugString().data());
+
+          VersionEdit edit;
+          edit.SetColumnFamily(cfd->GetID());
+          for (const auto &f : vstorage->LevelFiles(level)) {
+              edit.DeleteFile(level, f->fd.GetNumber());
+              edit.AddFile(to_level, f->fd.GetNumber(), f->fd.GetPathId(),
+                           f->fd.GetFileSize(), f->smallest, f->largest,
+                           f->fd.smallest_seqno, f->fd.largest_seqno,
+                           f->marked_for_compaction);
+          }
+          ROCKS_LOG_DEBUG(immutable_db_options_.info_log,
+                          "[%s] Apply version edit:\n%s", cfd->GetName().c_str(),
+                          edit.DebugString().data());
+
+          status = versions_->LogAndApply(cfd, mutable_cf_options, &edit, &mutex_,
+                                          directories_.GetDbDir());
+          InstallSuperVersionAndScheduleWork(cfd, &sv_context, mutable_cf_options);
+
+          ROCKS_LOG_DEBUG(immutable_db_options_.info_log, "[%s] LogAndApply: %s\n",
+                          cfd->GetName().c_str(), status.ToString().data());
+
+          if (status.ok()) {
+              ROCKS_LOG_DEBUG(immutable_db_options_.info_log,
+                              "[%s] After refitting:\n%s", cfd->GetName().c_str(),
+                              cfd->current()->DebugString().data());
+          }
       }
     }
-  }
-  if (to_level != level) {
-    ROCKS_LOG_DEBUG(immutable_db_options_.info_log,
-                    "[%s] Before refitting:\n%s", cfd->GetName().c_str(),
-                    cfd->current()->DebugString().data());
-
-    VersionEdit edit;
-    edit.SetColumnFamily(cfd->GetID());
-    for (const auto& f : vstorage->LevelFiles(level)) {
-      edit.DeleteFile(level, f->fd.GetNumber());
-      edit.AddFile(to_level, f->fd.GetNumber(), f->fd.GetPathId(),
-                   f->fd.GetFileSize(), f->smallest, f->largest,
-                   f->fd.smallest_seqno, f->fd.largest_seqno,
-                   f->marked_for_compaction);
+    catch(const std::runtime_error& re)
+    {
+          // speciffic handling for runtime_error
+      ROCKS_LOG_INFO(immutable_db_options_.info_log, "[ReFitLevel] Runtime error:\n");
+      ROCKS_LOG_INFO(immutable_db_options_.info_log, "[ReFitLevel] Runtime error: %s\n", re.what());
     }
-    ROCKS_LOG_DEBUG(immutable_db_options_.info_log,
-                    "[%s] Apply version edit:\n%s", cfd->GetName().c_str(),
-                    edit.DebugString().data());
-
-    status = versions_->LogAndApply(cfd, mutable_cf_options, &edit, &mutex_,
-                                    directories_.GetDbDir());
-    InstallSuperVersionAndScheduleWork(cfd, &sv_context, mutable_cf_options);
-
-    ROCKS_LOG_DEBUG(immutable_db_options_.info_log, "[%s] LogAndApply: %s\n",
-                    cfd->GetName().c_str(), status.ToString().data());
-
-    if (status.ok()) {
-      ROCKS_LOG_DEBUG(immutable_db_options_.info_log,
-                      "[%s] After refitting:\n%s", cfd->GetName().c_str(),
-                      cfd->current()->DebugString().data());
+    catch(const std::exception& ex)
+    {
+          // speciffic handling for all exceptions extending std::exception, except
+          // std::runtime_error which is handled explicitly
+      ROCKS_LOG_INFO(immutable_db_options_.info_log, "[ReFitLevel] Error occurred:\n");
+      ROCKS_LOG_INFO(immutable_db_options_.info_log, "[ReFitLevel] Error occurred: %s\n", ex.what());
     }
-  }
+    catch(...)
+    {
+          // catch any other errors (that we have no information about)
+        ROCKS_LOG_INFO(immutable_db_options_.info_log, "[ReFitLevel] Unknown failure occurred. Possible memory corruption");
+    }
 
-  sv_context.Clean();
-  refitting_level_ = false;
+    sv_context.Clean();
+    refitting_level_ = false;
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "[ReFitLevel] set to false");
 
-  return status;
+    return status;
 }
 
 int DBImpl::NumberLevels(ColumnFamilyHandle* column_family) {
