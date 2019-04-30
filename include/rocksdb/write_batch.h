@@ -171,6 +171,10 @@ class WriteBatch : public WriteBatchBase {
   // Otherwise returns Status::OK().
   Status PopSavePoint() override;
 
+  void setContentFlag(uint32_t theContentFlag) {
+    content_flags_.store(theContentFlag,std::memory_order_seq_cst);
+  }
+
   // Support for iterating over the contents of a batch.
   class Handler {
    public:
