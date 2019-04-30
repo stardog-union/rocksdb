@@ -21,6 +21,8 @@ cc_library(
     hdrs = glob(["*.h"]),
     deps = [
         "//include",
+        "//options:headers",
+        "//util:headers"
     ],
     visibility = ["//visibility:public"],
 )
