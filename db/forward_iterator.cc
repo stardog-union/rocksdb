@@ -236,6 +236,8 @@ void ForwardIterator::SVCleanup(DBImpl* db, SuperVersion* sv,
     if (background_purge_on_iterator_cleanup) {
       db->ScheduleBgLogWriterClose(&job_context);
     }
+    ROCKS_LOG_INFO(db->immutable_db_options_.info_log,
+                   "Unlock75");
     db->mutex_.Unlock();
     delete sv;
     if (job_context.HaveSomethingToDelete()) {

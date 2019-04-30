@@ -67,6 +67,8 @@ ColumnFamilyHandleImpl::~ColumnFamilyHandleImpl() {
       delete cfd_;
     }
     db_->FindObsoleteFiles(&job_context, false, true);
+    ROCKS_LOG_INFO(cfd_->ioptions()->info_log,
+                   "Unlock3");
     mutex_->Unlock();
     if (job_context.HaveSomethingToDelete()) {
       db_->PurgeObsoleteFiles(job_context);
@@ -510,6 +512,8 @@ ColumnFamilyData::~ColumnFamilyData() {
   if (super_version_ != nullptr) {
     // Release SuperVersion reference kept in ThreadLocalPtr.
     // This must be done outside of mutex_ since unref handler can lock mutex.
+    ROCKS_LOG_INFO(ioptions_.info_log,
+                   "Unlock2");
     super_version_->db_mutex->Unlock();
     local_sv_.reset();
     super_version_->db_mutex->Lock();
@@ -1051,6 +1055,8 @@ SuperVersion* ColumnFamilyData::GetThreadLocalSuperVersion(
       db_mutex->Lock();
     }
     sv = super_version_->Ref();
+    ROCKS_LOG_INFO(ioptions_.info_log,
+                   "Unlock1");
     db_mutex->Unlock();
 
     delete sv_to_delete;

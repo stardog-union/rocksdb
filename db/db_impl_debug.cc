@@ -148,6 +148,8 @@ void DBImpl::TEST_LockMutex() {
 }
 
 void DBImpl::TEST_UnlockMutex() {
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock50");
   mutex_.Unlock();
 }
 

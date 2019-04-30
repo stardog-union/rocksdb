@@ -208,6 +208,8 @@ void DBImpl::FindObsoleteFiles(JobContext* job_context, bool force,
       }
       alive_log_files_.pop_front();
       if (two_write_queues_) {
+        ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                       "Unlock52");
         log_write_mutex_.Unlock();
       }
       // Current log should always stay alive since it can't have
@@ -556,6 +558,8 @@ void DBImpl::DeleteObsoleteFiles() {
   JobContext job_context(next_job_id_.fetch_add(1));
   FindObsoleteFiles(&job_context, true);
 
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock51");
   mutex_.Unlock();
   if (job_context.HaveSomethingToDelete()) {
     PurgeObsoleteFiles(job_context);

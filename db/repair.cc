@@ -159,6 +159,9 @@ class Repairer {
     Status status = vset_.LogAndApply(cfd, mut_cf_opts, &edit, &mutex_,
                                       nullptr /* db_directory */,
                                       false /* new_descriptor_log */, cf_opts);
+
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock76");
     mutex_.Unlock();
     return status;
   }
@@ -595,6 +598,8 @@ class Repairer {
       Status status = vset_.LogAndApply(
           cfd, *cfd->GetLatestMutableCFOptions(), &edit, &mutex_,
           nullptr /* db_directory */, false /* new_descriptor_log */);
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock77");
       mutex_.Unlock();
       if (!status.ok()) {
         return status;

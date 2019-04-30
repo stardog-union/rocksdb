@@ -267,6 +267,8 @@ Status DBImpl::Resume() {
     return Status::Busy();
   }
 
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock32");
   mutex_.Unlock();
   Status s = error_handler_.RecoverFromBGError(true);
   mutex_.Lock();
@@ -311,6 +313,8 @@ Status DBImpl::ResumeImpl() {
     if (immutable_db_options_.atomic_flush) {
       autovector<ColumnFamilyData*> cfds;
       SelectColumnFamiliesForAtomicFlush(&cfds);
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock33");
       mutex_.Unlock();
       s = AtomicFlushMemTables(cfds, flush_opts, FlushReason::kErrorRecovery);
       mutex_.Lock();
@@ -320,6 +324,8 @@ Status DBImpl::ResumeImpl() {
           continue;
         }
         cfd->Ref();
+        ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                       "Unlock34");
         mutex_.Unlock();
         s = FlushMemTable(cfd, flush_opts, FlushReason::kErrorRecovery);
         mutex_.Lock();
@@ -341,6 +347,8 @@ Status DBImpl::ResumeImpl() {
   if (s.ok()) {
     s = error_handler_.ClearBGError();
   }
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock35");
   mutex_.Unlock();
 
   job_context.manifest_file_number = 1;
@@ -392,6 +400,8 @@ void DBImpl::CancelAllBackgroundWork(bool wait) {
   // before grabbing db mutex because the actual worker function
   // `DBImpl::DumpStats()` also holds db mutex
   if (thread_dump_stats_ != nullptr) {
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock14");
     mutex_.Unlock();
     thread_dump_stats_->cancel();
     mutex_.Lock();
@@ -403,6 +413,8 @@ void DBImpl::CancelAllBackgroundWork(bool wait) {
     if (immutable_db_options_.atomic_flush) {
       autovector<ColumnFamilyData*> cfds;
       SelectColumnFamiliesForAtomicFlush(&cfds);
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock15");
       mutex_.Unlock();
       AtomicFlushMemTables(cfds, FlushOptions(), FlushReason::kShutDown);
       mutex_.Lock();
@@ -410,6 +422,8 @@ void DBImpl::CancelAllBackgroundWork(bool wait) {
       for (auto cfd : *versions_->GetColumnFamilySet()) {
         if (!cfd->IsDropped() && cfd->initialized() && !cfd->mem()->IsEmpty()) {
           cfd->Ref();
+          ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                         "Unlock16");
           mutex_.Unlock();
           FlushMemTable(cfd, FlushOptions(), FlushReason::kShutDown);
           mutex_.Lock();
@@ -437,6 +451,8 @@ Status DBImpl::CloseHelper() {
   while (error_handler_.IsRecoveryInProgress()) {
     bg_cv_.Wait();
   }
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock19");
   mutex_.Unlock();
 
   // CancelAllBackgroundWork called with false means we just set the shutdown
@@ -484,6 +500,8 @@ Status DBImpl::CloseHelper() {
 
   if (default_cf_handle_ != nullptr) {
     // we need to delete handle outside of lock because it does its own locking
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock20");
     mutex_.Unlock();
     delete default_cf_handle_;
     mutex_.Lock();
@@ -502,6 +520,8 @@ Status DBImpl::CloseHelper() {
     JobContext job_context(next_job_id_.fetch_add(1));
     FindObsoleteFiles(&job_context, true);
 
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock21");
     mutex_.Unlock();
     // manifest number starting from 2
     job_context.manifest_file_number = 1;
@@ -554,6 +574,8 @@ Status DBImpl::CloseHelper() {
   // versions need to be destroyed before table_cache since it can hold
   // references to table_cache.
   versions_.reset();
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock22");
   mutex_.Unlock();
   if (db_lock_ != nullptr) {
     env_->UnlockFile(db_lock_);
@@ -806,6 +828,8 @@ Status DBImpl::SetDBOptions(
       if (new_options.stats_dump_period_sec !=
           mutable_db_options_.stats_dump_period_sec) {
           if (thread_dump_stats_) {
+            ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                           "Unlock36");
             mutex_.Unlock();
             thread_dump_stats_->cancel();
             mutex_.Lock();
@@ -1044,6 +1068,8 @@ InternalIterator* DBImpl::NewInternalIterator(
 
   mutex_.Lock();
   SuperVersion* super_version = cfd->GetSuperVersion()->Ref();
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock31");
   mutex_.Unlock();
   ReadOptions roptions;
   return NewInternalIterator(roptions, cfd, super_version, arena, range_del_agg,
@@ -1075,6 +1101,8 @@ void DBImpl::BackgroundCallPurge() {
       auto job_id = purge_file->job_id;
       purge_queue_.pop_front();
 
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock10");
       mutex_.Unlock();
       DeleteObsoleteFileImpl(job_id, fname, dir_to_sync, type, number);
       mutex_.Lock();
@@ -1082,6 +1110,8 @@ void DBImpl::BackgroundCallPurge() {
       assert(!logs_to_free_queue_.empty());
       log::Writer* log_writer = *(logs_to_free_queue_.begin());
       logs_to_free_queue_.pop_front();
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock12");
       mutex_.Unlock();
       delete log_writer;
       mutex_.Lock();
@@ -1094,6 +1124,8 @@ void DBImpl::BackgroundCallPurge() {
   // signal the DB destructor that it's OK to proceed with destruction. In
   // that case, all DB variables will be dealloacated and referencing them
   // will cause trouble.
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock13");
   mutex_.Unlock();
 }
 
@@ -1126,6 +1158,8 @@ static void CleanupIteratorState(void* arg1, void* /*arg2*/) {
     if (state->background_purge) {
       state->db->ScheduleBgLogWriterClose(&job_context);
     }
+    ROCKS_LOG_INFO(state->db->immutable_db_options().info_log,
+                   "Unlock17");
     state->mu->Unlock();
 
     delete state->super_version;
@@ -1137,6 +1171,8 @@ static void CleanupIteratorState(void* arg1, void* /*arg2*/) {
         state->db->PurgeObsoleteFiles(job_context, true /* schedule only */);
         state->mu->Lock();
         state->db->SchedulePurge();
+        ROCKS_LOG_INFO(state->db->immutable_db_options().info_log,
+                       "Unlock18");
         state->mu->Unlock();
       } else {
         state->db->PurgeObsoleteFiles(job_context);
@@ -1364,6 +1400,8 @@ std::vector<Status> DBImpl::MultiGet(
     mgd_iter.second->super_version =
         mgd_iter.second->cfd->GetSuperVersion()->Ref();
   }
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock29");
   mutex_.Unlock();
 
   // Contain a list of merge operations if merge occurs.
@@ -1439,6 +1477,8 @@ std::vector<Status> DBImpl::MultiGet(
       superversions_to_delete.push_back(mgd->super_version);
     }
   }
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock30");
   mutex_.Unlock();
 
   for (auto td : superversions_to_delete) {
@@ -1959,6 +1999,8 @@ Status DBImpl::GetPropertiesOfAllTables(ColumnFamilyHandle* column_family,
   mutex_.Lock();
   auto version = cfd->current();
   version->Ref();
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock23");
   mutex_.Unlock();
 
   auto s = version->GetPropertiesOfAllTables(props);
@@ -1966,6 +2008,8 @@ Status DBImpl::GetPropertiesOfAllTables(ColumnFamilyHandle* column_family,
   // Decrement the ref count
   mutex_.Lock();
   version->Unref();
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock24");
   mutex_.Unlock();
 
   return s;
@@ -1981,6 +2025,8 @@ Status DBImpl::GetPropertiesOfTablesInRange(ColumnFamilyHandle* column_family,
   mutex_.Lock();
   auto version = cfd->current();
   version->Ref();
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock25");
   mutex_.Unlock();
 
   auto s = version->GetPropertiesOfTablesInRange(range, n, props);
@@ -1988,6 +2034,8 @@ Status DBImpl::GetPropertiesOfTablesInRange(ColumnFamilyHandle* column_family,
   // Decrement the ref count
   mutex_.Lock();
   version->Unref();
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock26");
   mutex_.Unlock();
 
   return s;
@@ -2774,6 +2822,8 @@ Status DBImpl::WriteOptionsFile(bool need_mutex_lock,
   // because the single write thread ensures all new writes get queued.
   DBOptions db_options =
       BuildDBOptions(immutable_db_options_, mutable_db_options_);
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock37");
   mutex_.Unlock();
 
   TEST_SYNC_POINT("DBImpl::WriteOptionsFile:1");
@@ -3137,11 +3187,15 @@ Status DBImpl::IngestExternalFile(
         if (immutable_db_options_.atomic_flush) {
           autovector<ColumnFamilyData*> cfds;
           SelectColumnFamiliesForAtomicFlush(&cfds);
+          ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                         "Unlock27");
           mutex_.Unlock();
           status = AtomicFlushMemTables(cfds, flush_opts,
                                         FlushReason::kExternalFileIngestion,
                                         true /* writes_stopped */);
         } else {
+          ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                         "Unlock28");
           mutex_.Unlock();
           status = FlushMemTable(cfd, flush_opts,
                                  FlushReason::kExternalFileIngestion,

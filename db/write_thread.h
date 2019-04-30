@@ -13,6 +13,7 @@
 #include <mutex>
 #include <type_traits>
 #include <vector>
+#include <options/db_options.h>
 
 #include "db/dbformat.h"
 #include "db/pre_release_callback.h"
@@ -383,7 +384,9 @@ class WriteThread {
   port::Mutex stall_mu_;
   port::CondVar stall_cv_;
 
-  // Waits for w->state & goal_mask using w->StateMutex().  Returns
+  ImmutableDBOptions m_db_options;
+
+    // Waits for w->state & goal_mask using w->StateMutex().  Returns
   // the state that satisfies goal_mask.
   uint8_t BlockingAwaitState(Writer* w, uint8_t goal_mask);
 

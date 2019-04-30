@@ -529,6 +529,9 @@ void CompactionJob::GenSubcompactionBoundaries() {
     // ApproximateSize could potentially create table reader iterator to seek
     // to the index block and may incur I/O cost in the process. Unlock db
     // mutex to reduce contention
+    ROCKS_LOG_INFO(db_options_.info_log,
+                   "Unlock5");
+
     db_mutex_->Unlock();
     uint64_t size = versions_->ApproximateSize(v, a, b, start_lvl, out_lvl + 1);
     db_mutex_->Lock();

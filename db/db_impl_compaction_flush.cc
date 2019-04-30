@@ -78,6 +78,8 @@ Status DBImpl::SyncClosedLogs(JobContext* job_context) {
 
   Status s;
   if (!logs_to_sync.empty()) {
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock49");
     mutex_.Unlock();
 
     for (log::Writer* log : logs_to_sync) {
@@ -527,6 +529,8 @@ void DBImpl::NotifyOnFlushBegin(ColumnFamilyData* cfd, FileMetaData* file_meta,
       (cfd->current()->storage_info()->NumLevelFiles(0) >=
        mutable_cf_options.level0_stop_writes_trigger);
   // release lock while notifying events
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock47");
   mutex_.Unlock();
   {
     FlushJobInfo info;
@@ -578,6 +582,8 @@ void DBImpl::NotifyOnFlushCompleted(ColumnFamilyData* cfd,
       (cfd->current()->storage_info()->NumLevelFiles(0) >=
        mutable_cf_options.level0_stop_writes_trigger);
   // release lock while notifying events
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock48");
   mutex_.Unlock();
   {
     FlushJobInfo info;
@@ -641,6 +647,8 @@ Status DBImpl::CompactRange(const CompactRangeOptions& options,
       autovector<ColumnFamilyData*> cfds;
       mutex_.Lock();
       SelectColumnFamiliesForAtomicFlush(&cfds);
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock44");
       mutex_.Unlock();
       s = AtomicFlushMemTables(cfds, fo, FlushReason::kManualCompaction,
                                false /* writes_stopped */);
@@ -951,6 +959,8 @@ Status DBImpl::CompactFilesImpl(
 
   compaction_job.Prepare();
 
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock43");
   mutex_.Unlock();
   TEST_SYNC_POINT("CompactFilesImpl:0");
   TEST_SYNC_POINT("CompactFilesImpl:1");
@@ -1053,6 +1063,8 @@ void DBImpl::NotifyOnCompactionBegin(ColumnFamilyData* cfd,
   Version* current = cfd->current();
   current->Ref();
   // release lock while notifying events
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock45");
   mutex_.Unlock();
   TEST_SYNC_POINT("DBImpl::NotifyOnCompactionBegin::UnlockMutex");
   {
@@ -1115,6 +1127,8 @@ void DBImpl::NotifyOnCompactionCompleted(
   Version* current = cfd->current();
   current->Ref();
   // release lock while notifying events
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock46");
   mutex_.Unlock();
   TEST_SYNC_POINT("DBImpl::NotifyOnCompactionCompleted::UnlockMutex");
   {
@@ -2096,6 +2110,8 @@ void DBImpl::BackgroundCallFlush() {
       uint64_t error_cnt =
           default_cf_internal_stats_->BumpAndGetBackgroundErrorCount();
       bg_cv_.SignalAll();  // In case a waiter can proceed despite the error
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock40");
       mutex_.Unlock();
       ROCKS_LOG_ERROR(immutable_db_options_.info_log,
                       "Waiting after background flush error: %s"
@@ -2116,6 +2132,8 @@ void DBImpl::BackgroundCallFlush() {
     // delete unnecessary files if any, this is done outside the mutex
     if (job_context.HaveSomethingToClean() ||
         job_context.HaveSomethingToDelete() || !log_buffer.IsEmpty()) {
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock41");
       mutex_.Unlock();
       TEST_SYNC_POINT("DBImpl::BackgroundCallFlush:FilesFound");
       // Have to flush the info logs before bg_flush_scheduled_--
@@ -2179,6 +2197,8 @@ void DBImpl::BackgroundCallCompaction(PrepickedCompaction* prepicked_compaction,
       uint64_t error_cnt =
           default_cf_internal_stats_->BumpAndGetBackgroundErrorCount();
       bg_cv_.SignalAll();  // In case a waiter can proceed despite the error
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                       "Unlock38");
       mutex_.Unlock();
       log_buffer.FlushBufferToLog();
       ROCKS_LOG_ERROR(immutable_db_options_.info_log,
@@ -2201,6 +2221,8 @@ void DBImpl::BackgroundCallCompaction(PrepickedCompaction* prepicked_compaction,
     // delete unnecessary files if any, this is done outside the mutex
     if (job_context.HaveSomethingToClean() ||
         job_context.HaveSomethingToDelete() || !log_buffer.IsEmpty()) {
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock39");
       mutex_.Unlock();
       // Have to flush the info logs before bg_compaction_scheduled_--
       // because if bg_flush_scheduled_ becomes 0 and the lock is
@@ -2576,6 +2598,8 @@ Status DBImpl::BackgroundCompaction(bool* made_progress,
     NotifyOnCompactionBegin(c->column_family_data(), c.get(), status,
                             compaction_job_stats, job_context->job_id);
 
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock42");
     mutex_.Unlock();
     compaction_job.Run();
     TEST_SYNC_POINT("DBImpl::BackgroundCompaction:NonTrivial:AfterRun");

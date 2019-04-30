@@ -964,6 +964,8 @@ Status DBImpl::RestoreAliveLogFiles(const std::vector<uint64_t>& log_numbers) {
     }
   }
   if (two_write_queues_) {
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock56");
     log_write_mutex_.Unlock();
   }
   return s;
@@ -1001,6 +1003,8 @@ Status DBImpl::WriteLevel0TableForRecovery(int job_id, ColumnFamilyData* cfd,
 
     {
       auto write_hint = cfd->CalculateSSTWriteHint(0);
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock57");
       mutex_.Unlock();
 
       SequenceNumber earliest_write_conflict_snapshot;
@@ -1192,6 +1196,8 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
           if (db_options.create_missing_column_families) {
             // missing column family, create it
             ColumnFamilyHandle* handle;
+            ROCKS_LOG_INFO(db_options.info_log,
+                           "Unlock53");
             impl->mutex_.Unlock();
             s = impl->CreateColumnFamily(cf.options, cf.name, &handle);
             impl->mutex_.Lock();
@@ -1220,6 +1226,8 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
       impl->alive_log_files_.push_back(
           DBImpl::LogFileNumberSize(impl->logfile_number_));
       if (impl->two_write_queues_) {
+        ROCKS_LOG_INFO(db_options.info_log,
+                       "Unlock54");
         impl->log_write_mutex_.Unlock();
       }
       impl->DeleteObsoleteFiles();
@@ -1268,6 +1276,8 @@ Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,
     impl->opened_successfully_ = true;
     impl->MaybeScheduleFlushOrCompaction();
   }
+  ROCKS_LOG_INFO(db_options.info_log,
+                 "Unlock55");
   impl->mutex_.Unlock();
 
 #ifndef ROCKSDB_LITE

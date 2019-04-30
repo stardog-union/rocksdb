@@ -94,6 +94,8 @@ Status CompactedDBImpl::Init(const Options& options) {
               DefaultColumnFamily())->cfd();
     cfd_->InstallSuperVersion(&sv_context, &mutex_);
   }
+  ROCKS_LOG_INFO(options.info_log,
+                 "Unlock4");
   mutex_.Unlock();
   sv_context.Clean();
   if (!s.ok()) {

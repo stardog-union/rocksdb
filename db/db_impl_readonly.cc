@@ -182,6 +182,8 @@ Status DB::OpenForReadOnly(
       cfd->InstallSuperVersion(&sv_context, &impl->mutex_);
     }
   }
+  ROCKS_LOG_INFO(db_options.info_log,
+                 "Unlock58");
   impl->mutex_.Unlock();
   sv_context.Clean();
   if (s.ok()) {

@@ -131,6 +131,8 @@ void ErrorHandler::CancelErrorRecovery() {
       db_options_.sst_file_manager.get());
   if (sfm) {
     // This may or may not cancel a pending recovery
+    ROCKS_LOG_INFO(db_options_.info_log,
+                   "Unlock73");
     db_mutex_->Unlock();
     bool cancelled = sfm->CancelErrorRecovery(this);
     db_mutex_->Lock();

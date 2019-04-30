@@ -288,6 +288,8 @@ Status FlushJob::WriteLevel0Table() {
   Status s;
   {
     auto write_hint = cfd_->CalculateSSTWriteHint(0);
+    ROCKS_LOG_INFO(db_options_.info_log,
+                   "Unlock74");
     db_mutex_->Unlock();
     if (log_buffer_) {
       log_buffer_->FlushBufferToLog();

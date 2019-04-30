@@ -27,7 +27,8 @@ WriteThread::WriteThread(const ImmutableDBOptions& db_options)
       last_sequence_(0),
       write_stall_dummy_(),
       stall_mu_(),
-      stall_cv_(&stall_mu_) {}
+      stall_cv_(&stall_mu_),
+      m_db_options(db_options) {}
 
 uint8_t WriteThread::BlockingAwaitState(Writer* w, uint8_t goal_mask) {
   // We're going to block.  Lazily create the mutex.  We guarantee
@@ -725,6 +726,8 @@ void WriteThread::ExitAsBatchGroupLeader(WriteGroup& write_group,
 static WriteThread::AdaptationContext eu_ctx("EnterUnbatched");
 void WriteThread::EnterUnbatched(Writer* w, InstrumentedMutex* mu) {
   assert(w != nullptr && w->batch == nullptr);
+  ROCKS_LOG_INFO(m_db_options.info_log,
+                 "Unlock78");
   mu->Unlock();
   bool linked_as_leader = LinkOne(w, &newest_writer_);
   if (!linked_as_leader) {

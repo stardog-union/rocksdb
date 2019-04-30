@@ -89,6 +89,8 @@ Status DBImpl::GetLiveFiles(std::vector<std::string>& ret,
     if (immutable_db_options_.atomic_flush) {
       autovector<ColumnFamilyData*> cfds;
       SelectColumnFamiliesForAtomicFlush(&cfds);
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock6");
       mutex_.Unlock();
       status = AtomicFlushMemTables(cfds, FlushOptions(),
                                     FlushReason::kGetLiveFiles);
@@ -99,6 +101,8 @@ Status DBImpl::GetLiveFiles(std::vector<std::string>& ret,
           continue;
         }
         cfd->Ref();
+        ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                       "Unlock7");
         mutex_.Unlock();
         status = FlushMemTable(cfd, FlushOptions(), FlushReason::kGetLiveFiles);
         TEST_SYNC_POINT("DBImpl::GetLiveFiles:1");
@@ -113,6 +117,8 @@ Status DBImpl::GetLiveFiles(std::vector<std::string>& ret,
     versions_->GetColumnFamilySet()->FreeDeadColumnFamilies();
 
     if (!status.ok()) {
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock8");
       mutex_.Unlock();
       ROCKS_LOG_ERROR(immutable_db_options_.info_log, "Cannot Flush data %s\n",
                       status.ToString().c_str());
@@ -145,6 +151,8 @@ Status DBImpl::GetLiveFiles(std::vector<std::string>& ret,
   // find length of manifest file while holding the mutex lock
   *manifest_file_size = versions_->manifest_file_size();
 
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock9");
   mutex_.Unlock();
   return Status::OK();
 }

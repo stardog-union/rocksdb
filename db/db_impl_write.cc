@@ -211,6 +211,9 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
   }
   log::Writer* log_writer = logs_.back().writer;
 
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock68");
+
   mutex_.Unlock();
 
   // Add to log and apply to memtable.  We can release the lock
@@ -368,6 +371,9 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
   if (need_log_sync) {
     mutex_.Lock();
     MarkLogsSynced(logfile_number_, need_log_dir_sync, status);
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock69");
+
     mutex_.Unlock();
     // Requesting sync with two_write_queues_ is expected to be very rare. We
     // hence provide a simple implementation that is not necessarily efficient.
@@ -436,6 +442,8 @@ Status DBImpl::PipelinedWriteImpl(const WriteOptions& write_options,
     w.status = PreprocessWrite(write_options, &need_log_sync, &write_context);
     PERF_TIMER_START(write_pre_and_post_process_time);
     log::Writer* log_writer = logs_.back().writer;
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock62");
     mutex_.Unlock();
 
     // This can set non-OK status if callback fail.
@@ -495,6 +503,8 @@ Status DBImpl::PipelinedWriteImpl(const WriteOptions& write_options,
     if (need_log_sync) {
       mutex_.Lock();
       MarkLogsSynced(logfile_number_, need_log_dir_sync, w.status);
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock63");
       mutex_.Unlock();
     }
 
@@ -683,6 +693,8 @@ void DBImpl::WriteStatusCheck(const Status& status) {
       !status.IsBusy() && !status.IsIncomplete()) {
     mutex_.Lock();
     error_handler_.SetBGError(status, BackgroundErrorReason::kWriteCallback);
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock71");
     mutex_.Unlock();
   }
 }
@@ -697,6 +709,8 @@ void DBImpl::MemTableInsertStatusCheck(const Status& status) {
     mutex_.Lock();
     assert(!error_handler_.IsBGWorkStopped());
     error_handler_.SetBGError(status, BackgroundErrorReason::kMemTable);
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock61");
     mutex_.Unlock();
   }
 }
@@ -837,6 +851,8 @@ Status DBImpl::WriteToWAL(const WriteBatch& merged_batch,
   }
   Status status = log_writer->AddRecord(log_entry);
   if (UNLIKELY(needs_locking)) {
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock72");
     log_write_mutex_.Unlock();
   }
   if (log_used != nullptr) {
@@ -954,6 +970,10 @@ Status DBImpl::ConcurrentWriteToWAL(const WriteThread::WriteGroup& write_group,
     cached_recoverable_state_ = *to_be_cached_state;
       cached_recoverable_state_empty_ = false;
   }
+
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                 "Unlock59");
+
   log_write_mutex_.Unlock();
 
   if (status.ok()) {
@@ -995,6 +1015,8 @@ Status DBImpl::WriteRecoverableState() {
     }
     versions_->SetLastSequence(last_seq);
     if (two_write_queues_) {
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock70");
       log_write_mutex_.Unlock();
     }
     if (status.ok() && recoverable_state_pre_release_callback_) {
@@ -1216,6 +1238,8 @@ Status DBImpl::DelayWrite(uint64_t num_bytes,
       // fail any pending writers with no_slowdown
       write_thread_.BeginWriteStall();
       TEST_SYNC_POINT("DBImpl::DelayWrite:BeginWriteStallDone");
+      ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock60");
       mutex_.Unlock();
       // We will delay the write until we have slept for delay ms or
       // we don't need a delay anymore
@@ -1387,6 +1411,8 @@ Status DBImpl::SwitchMemtable(ColumnFamilyData* cfd, WriteContext* context) {
   if (immutable_db_options_.enable_pipelined_write) {
     // Memtable writers may call DB::Get in case max_successive_merges > 0,
     // which may lock mutex. Unlocking mutex here to avoid deadlock.
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock64");
     mutex_.Unlock();
     write_thread_.WaitForMemTableWriters();
     mutex_.Lock();
@@ -1400,6 +1426,8 @@ Status DBImpl::SwitchMemtable(ColumnFamilyData* cfd, WriteContext* context) {
   }
   bool creating_new_log = !log_empty_;
   if (two_write_queues_) {
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock65");
     log_write_mutex_.Unlock();
   }
   uint64_t recycle_log_number = 0;
@@ -1429,6 +1457,8 @@ Status DBImpl::SwitchMemtable(ColumnFamilyData* cfd, WriteContext* context) {
   const auto preallocate_block_size =
     GetWalPreallocateBlockSize(mutable_cf_options.write_buffer_size);
   auto write_hint = CalculateWALWriteHint();
+  ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                     "Unlock66");
   mutex_.Unlock();
   {
     std::string log_fname =
@@ -1502,6 +1532,8 @@ Status DBImpl::SwitchMemtable(ColumnFamilyData* cfd, WriteContext* context) {
     }
     logs_.emplace_back(logfile_number_, new_log);
     alive_log_files_.push_back(LogFileNumberSize(logfile_number_));
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "Unlock67");
     log_write_mutex_.Unlock();
   }
 
