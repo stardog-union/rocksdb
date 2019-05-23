@@ -4,13 +4,14 @@ PLATFORM_DEFINES = select({
         "ROCKSDB_PLATFORM_POSIX",
         "HAVE_SSE42",
         "ROCKSDB_LIB_IO_POSIX",
-        "ROCKSDB_SUPPORT_THREAD_LOCAL",
         "ROCKSDB_FALLOCATE_PRESENT",
         "ROCKSDB_MALLOC_USABLE_SIZE",
         "ROCKSDB_PTHREAD_ADAPTIVE_MUTEX",
         "ROCKSDB_RANGESYNC_PRESENT",
         "ROCKSDB_SCHED_GETCPU_PRESENT",
         "rocksdb_shared_EXPORTS",
+        # Thread local support is disabled, as it appears to trigger an incompatibility with CentOS 7.
+        # "ROCKSDB_SUPPORT_THREAD_LOCAL",
     ],
     "//:osx": [
         "OS_MACOSX",

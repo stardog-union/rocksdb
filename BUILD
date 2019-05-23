@@ -76,3 +76,50 @@ cc_library(
     srcs = ["empty_main.cc"],
     visibility = ["//visibility:public"],
 )
+
+SHARED_LIBRARY_LINKOPTS = select({
+    "@toolchain//:linux-target": [
+        "-static-libgcc",
+        "-static-libstdc++",
+    ],
+    "@toolchain//:osx-target": [
+        "-static-libstdc++",
+    ],
+    "@toolchain//:windows-target": [],
+})
+
+filegroup(
+    name = "librocksdb",
+    srcs = select({
+        "@toolchain//:linux-target": [":librocksdb.so"],
+        "@toolchain//:osx-target": [":librocksdb.dylib"],
+        "@toolchain//:windows-target": [":librocksdb.dll"],
+    }),
+)
+
+cc_binary(
+    name = "librocksdb.so",
+    deps = [
+        ":rocksdb",
+    ],
+    linkshared = True,
+    linkopts = SHARED_LIBRARY_LINKOPTS,
+)
+
+cc_binary(
+    name = "librocksdb.dylib",
+    deps = [
+        ":rocksdb",
+    ],
+    linkshared = True,
+    linkopts = SHARED_LIBRARY_LINKOPTS,
+)
+
+cc_binary(
+    name = "librocksdb.dll",
+    deps = [
+        ":rocksdb",
+    ],
+    linkshared = True,
+    linkopts = SHARED_LIBRARY_LINKOPTS,
+)
