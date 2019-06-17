@@ -25,7 +25,7 @@ new_http_archive(
 http_archive(
     name = "toolchain",
     urls = [
-        "https://github.com/stardog-union/toolchain/archive/v1.zip",
+        "https://github.com/stardog-union/toolchain/archive/v3.zip",
     ],
-    strip_prefix = "toolchain-1",
+    strip_prefix = "toolchain-3",
 )
