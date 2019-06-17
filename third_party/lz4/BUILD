@@ -13,6 +13,6 @@ cc_test(
     ],
     deps = [
         ":lz4",
-	"//third_party/gtest",
+	"//third_party/gtest:gtest_main",
     ],
 )
