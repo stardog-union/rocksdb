@@ -14,11 +14,11 @@ http_archive(
     strip_prefix = "snappy-add_bazel",
 )
 
-new_http_archive(
+http_archive(
     name = "org_lz4",
     urls = ["https://github.com/lz4/lz4/archive/v1.8.2.zip"],
     strip_prefix = "lz4-1.8.2",
-    build_file = "third_party/lz4/BUILD.external",
+    build_file = "@//third_party/lz4:BUILD.external",
     sha256 = "6df2bc7b830d4a23ca6f0a19a772fc0a61100f98baa843f9bbf873a80b6840d5",
 )
 
