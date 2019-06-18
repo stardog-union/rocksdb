@@ -13,7 +13,7 @@ cc_test(
     ],
     deps = [
         ":snappy",
-	"//third_party/gtest",
+	"//third_party/gtest:gtest_main",
     ],
 )
 
