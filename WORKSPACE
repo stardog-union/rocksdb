@@ -22,12 +22,19 @@ http_archive(
     sha256 = "6df2bc7b830d4a23ca6f0a19a772fc0a61100f98baa843f9bbf873a80b6840d5",
 )
 
+toolchain_version="bazel_0.26"
 http_archive(
     name = "toolchain",
     urls = [
-#        "https://github.com/stardog-union/toolchain/archive/v3.zip",
+        "https://github.com/stardog-union/toolchain/archive/%s.zip" % toolchain_version,
+    ],
+    strip_prefix = "toolchain-%s" % toolchain_version,
+)
+
+http_archive(
+    name = "toolchain-local",
+    urls = [
         "file:///home/james/git/toolchain.tgz",
     ],
-#    strip_prefix = "toolchain-3",
     strip_prefix = "toolchain",
 )

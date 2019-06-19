@@ -1,28 +1,4 @@
 config_setting(
-    name = "linux",
-    constraint_values = [
-        "@bazel_tools//platforms:linux",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-config_setting(
-    name = "osx",
-    constraint_values = [
-        "@bazel_tools//platforms:osx",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-config_setting(
-    name = "windows",
-    constraint_values = [
-        "@bazel_tools//platforms:windows",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-config_setting(
     name = "tests_enabled_debug_mode",
     values = {
         "compilation_mode": "dbg",
@@ -78,22 +54,22 @@ cc_library(
 )
 
 SHARED_LIBRARY_LINKOPTS = select({
-    "@toolchain//:linux-target": [
+    "@toolchain//:is_target_linux": [
         "-static-libgcc",
         "-static-libstdc++",
     ],
-    "@toolchain//:osx-target": [
+    "@toolchain//:is_target_osx": [
         "-static-libstdc++",
     ],
-    "@toolchain//:windows-target": [],
+    "@toolchain//:is_target_windows": [],
 })
 
 filegroup(
     name = "librocksdb",
     srcs = select({
-        "@toolchain//:linux-target": [":librocksdb.so"],
-        "@toolchain//:osx-target": [":librocksdb.dylib"],
-        "@toolchain//:windows-target": [":librocksdb.dll"],
+        "@toolchain//:is_target_linux": [":librocksdb.so"],
+        "@toolchain//:is_target_osx": [":librocksdb.dylib"],
+        "@toolchain//:is_target_windows": [":librocksdb.dll"],
     }),
 )
 

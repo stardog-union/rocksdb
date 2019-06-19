@@ -1,0 +1,10 @@
+build --crosstool_top=@toolchain//cpp:c++14
+build --platform_suffix=-local
+
+build:linux-osx-cross --compiler=linux-osx-cross
+build:linux-osx-cross --platforms=@toolchain//:osx
+build:linux-osx-cross --platform_suffix=-linux-osx-cross
+
+build:centos7 --compiler=centos7
+build:centos7 --platforms=@toolchain//:centos7
+build:centos7 --platform_suffix=-centos7

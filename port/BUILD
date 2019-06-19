@@ -1,5 +1,5 @@
 PLATFORM_DEFINES = select({
-    "//:linux": [
+    "@toolchain//:is_target_linux": [
         "OS_LINUX",
         "ROCKSDB_PLATFORM_POSIX",
         "HAVE_SSE42",
@@ -13,14 +13,14 @@ PLATFORM_DEFINES = select({
         # Thread local support is disabled, as it appears to trigger an incompatibility with CentOS 7.
         # "ROCKSDB_SUPPORT_THREAD_LOCAL",
     ],
-    "//:osx": [
+    "@toolchain//:is_target_osx": [
         "OS_MACOSX",
         "ROCKSDB_PLATFORM_POSIX",
         "HAVE_SSE42",
         "ROCKSDB_LIB_IO_POSIX",
         "rocksdb_shared_EXPORTS",
     ],
-    "//:windows": [
+    "@toolchain//:is_target_windows": [
         "OS_WIN",
     ],
     "//conditions:default": [],
@@ -44,13 +44,13 @@ COMMON_HDRS = [
 ]
 
 PLATFORM_HDRS = select({
-    "//:linux" : [
+    "@toolchain//:is_target_linux" : [
         "port_posix.h",
     ],
-    "//:osx" : [
+    "@toolchain//:is_target_osx" : [
         "port_posix.h",
     ],
-    "//:windows" : glob(["win/*.h"]) + ["xpress.h"],
+    "@toolchain//:is_target_windows" : glob(["win/*.h"]) + ["xpress.h"],
 })
 
 COMMON_SRCS = [
@@ -58,13 +58,13 @@ COMMON_SRCS = [
 ]
 
 PLATFORM_SRCS = select({
-    "//:linux" : [
+    "@toolchain//:is_target_linux" : [
         "port_posix.cc",
     ],
-    "//:osx" : [
+    "@toolchain//:is_target_osx" : [
         "port_posix.cc",
     ],
-    "//:windows" : glob(["win/*.cc"]),
+    "@toolchain//:is_target_windows" : glob(["win/*.cc"]),
 })
 
 cc_library(

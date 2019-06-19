@@ -3,17 +3,17 @@ load("//:rocksdb.bzl", "constrained_library", "constrained_test")
 COMMON_HDRS = []
 
 PLATFORM_HDRS = select({
-    "//:linux" : [
+    "@toolchain//:is_target_linux" : [
         "env_chroot.h",
         "io_posix.h",
         "posix_logger.h",
     ],
-    "//:osx" : [
+    "@toolchain//:is_target_osx" : [
         "env_chroot.h",
         "io_posix.h",
         "posix_logger.h",
     ],
-    "//:windows" : [],
+    "@toolchain//:is_target_windows" : [],
 })
 
 COMMON_SRCS = [
@@ -22,23 +22,23 @@ COMMON_SRCS = [
 ]
 
 PLATFORM_SRCS = select({
-    "//:linux" : [
+    "@toolchain//:is_target_linux" : [
         "env_chroot.cc",
         "env_posix.cc",
         "io_posix.cc",
     ],
-    "//:osx" : [
+    "@toolchain//:is_target_osx" : [
         "env_chroot.cc",
         "env_posix.cc",
         "io_posix.cc",
     ],
-    "//:windows" : [],
+    "@toolchain//:is_target_windows" : [],
 })
 
 
 DEFAULT_DEFINES = select({
-    "//:linux": ["ROCKSDB_PLATFORM_POSIX=1"],
-    "//:osx": ["ROCKSDB_PLATFORM_POSIX=1"],
+    "@toolchain//:is_target_linux": ["ROCKSDB_PLATFORM_POSIX=1"],
+    "@toolchain//:is_target_osx": ["ROCKSDB_PLATFORM_POSIX=1"],
     "//conditions:default": [],
 })
 
