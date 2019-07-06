@@ -10,8 +10,7 @@ PLATFORM_DEFINES = select({
         "ROCKSDB_RANGESYNC_PRESENT",
         "ROCKSDB_SCHED_GETCPU_PRESENT",
         "rocksdb_shared_EXPORTS",
-        # Thread local support is disabled, as it appears to trigger an incompatibility with CentOS 7.
-        # "ROCKSDB_SUPPORT_THREAD_LOCAL",
+        "ROCKSDB_SUPPORT_THREAD_LOCAL",
     ],
     "@toolchain//:is_target_osx": [
         "OS_MACOSX",
