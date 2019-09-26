@@ -43,9 +43,11 @@ class InstrumentedMutex {
   void LockInternal();
   friend class InstrumentedCondVar;
   port::Mutex mutex_;
+#if !defined(NPERF_CONTEXT)
   Statistics* stats_;
   Env* env_;
   int stats_code_;
+#endif
 };
 
 // A wrapper class for port::Mutex that provides additional layer
