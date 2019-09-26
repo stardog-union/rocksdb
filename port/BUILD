@@ -11,6 +11,7 @@ PLATFORM_DEFINES = select({
         "ROCKSDB_RANGESYNC_PRESENT",
         "ROCKSDB_SCHED_GETCPU_PRESENT",
         "rocksdb_shared_EXPORTS",
+        "NPERF_CONTEXT",
     ],
     "//:osx": [
         "OS_MACOSX",
@@ -18,9 +19,11 @@ PLATFORM_DEFINES = select({
         "HAVE_SSE42",
         "ROCKSDB_LIB_IO_POSIX",
         "rocksdb_shared_EXPORTS",
+        "NPERF_CONTEXT",
     ],
     "//:windows": [
         "OS_WIN",
+        "NPERF_CONTEXT",
     ],
     "//conditions:default": [],
 })
