@@ -1,24 +1,62 @@
 load("//:rocksdb.bzl", "constrained_library", "constrained_test")
 
+DEFAULT_DEFINES = select({
+    "//:linux": ["ROCKSDB_PLATFORM_POSIX=1"],
+    "//:osx": ["ROCKSDB_PLATFORM_POSIX=1"],
+    "//conditions:default": [],
+})
+
 cc_library(
     name = "table",
-    srcs = glob(["*.cc"], exclude=["table_reader_bench.cc", "*_test.*", "mock_table.*"]),
+    srcs = glob(["*.cc","block_based/*.cc","adaptive/*.cc","cuckoo/*.cc","plain/*.cc"],  exclude=["*_test.cc"]),
     deps = [
         ":headers",
+        ":db_headers",
         "//db:headers",
         "//include",
+        "//cache:headers",
+        "//memory:headers",
         "//options:headers",
         "//util:headers",
+        "//logging:headers",
+        "//test_util:headers",
+        "//trace_replay:headers"
     ],
     visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "headers",
-    hdrs = glob(["*.h"], exclude=["*_test.*", "mock_table.*"]),
+    hdrs = glob(["*.h","block_based/*.h","adaptive/*.h","cuckoo/*.h","plain/*.h"]),
     deps = [
+        "//trace_replay:headers",
+        "//test_util:headers"
     ],
     visibility = ["//visibility:public"],
+    defines = DEFAULT_DEFINES,
+)
+
+cc_library(
+    name = "db_headers",
+    hdrs = glob(["get_context.h", "internal_iterator.h", "iter_heap.h", "merging_iterator.h", "meta_blocks.h",
+                 "multiget_context.h", "sst_file_writer_collectors.h", "table_builder.h", "table_reader.h",
+                 "block_based/block.h", "block_based/block_based_table_factory.h",
+                 "block_based/block_based_table_reader.h",
+                 "block_based/filter_block.h",
+                 "block_based/full_filter_block.h",
+                 "block_based/partitioned_filter_block.h",
+                 "cuckoo/cuckoo_table_reader.h",
+                 "plain/plain_table_index.h",
+                 "plain/plain_table_key_coding.h",
+                 "plain/plain_table_reader.h",
+                 ]),
+    deps = [
+        "//include",
+        "//trace_replay:headers",
+        "//db:headers",
+    ],
+    visibility = ["//visibility:public"],
+    defines = DEFAULT_DEFINES,
 )
 
 constrained_library(
@@ -29,6 +67,8 @@ constrained_library(
         "//memtable:headers",
         "//options",
         "//util:test_utils",
+        "//memory:headers",
+        "//trace_replay:headers"
     ],
     visibility = ["//visibility:public"],
 )

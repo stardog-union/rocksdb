@@ -8,9 +8,11 @@ EXCLUDED_FILES = [
 
 cc_library(
     name = "db",
-    srcs = glob(["*.cc"], exclude=["*_test.cc", "*_test2.cc", "*_test_util.cc"] + EXCLUDED_FILES),
+    srcs = glob(["*.cc","db_impl/*.cc","compaction/*.cc"], exclude=["*_test.cc", "*_test2.cc", "*_test_util.cc"] + EXCLUDED_FILES),
     deps = [
         ":headers",
+        "//file:headers",
+        "//test_util:headers"
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,
@@ -18,7 +20,7 @@ cc_library(
 
 cc_library(
     name = "headers",
-    hdrs = glob(["*.h"]),
+    hdrs = glob(["*.h","db_impl/*.h","compaction/*.h"]),
     deps = [
         "//env:headers",
         "//include",
@@ -26,11 +28,15 @@ cc_library(
         "//memtable:headers",
         "//monitoring:headers",
         "//options:headers",
+        "//logging:headers",
         "//port:headers",
         "//table:headers",
         "//tools:headers",
         "//util:headers",
         "//utilities:headers",
+        "//memory:headers",
+        "//file:headers",
+        "//test_util:headers",
     ],
     visibility = ["//visibility:public"],
 )

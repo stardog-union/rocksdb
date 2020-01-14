@@ -36,7 +36,7 @@ FEATURE_DEFINES = [
 DEFAULT_DEFINES = PLATFORM_DEFINES + FEATURE_DEFINES
 
 COMMON_HDRS = [
-    "dirent.h",
+    "port_dirent.h",
     "likely.h",
     "port.h",
     "jemalloc_helper.h",
@@ -75,6 +75,7 @@ cc_library(
     deps = [
         ":headers",
         "//util:headers",
+        "//logging:headers",
     ],
     visibility = ["//visibility:public"],
     defines = DEFAULT_DEFINES,

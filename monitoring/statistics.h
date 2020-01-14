@@ -52,10 +52,19 @@ class StatisticsImpl : public Statistics {
   // In case a user explictly calls it, for example, they may have a wrapped
   // Statistics object, passing the call to recordTick() into here, nothing
   // will break.
-  void measureTime(uint32_t histogramType, uint64_t time) override {
-    recordInHistogram(histogramType, time);
+  void measureTime(uint32_t histogramType, uint64_t value) override {
+    assert(enable_internal_stats_ ? histogramType < INTERNAL_HISTOGRAM_ENUM_MAX
+                                  : histogramType < HISTOGRAM_ENUM_MAX);
+
+    if (histogramType < HISTOGRAM_ENUM_MAX || enable_internal_stats_) {
+      getThreadHistogramInfo(histogramType)->value.Add(value);
+    }
+    if (stats_ && histogramType < HISTOGRAM_ENUM_MAX) {
+      stats_->measureTime(histogramType, value);
+    }
   }
-  virtual void recordInHistogram(uint32_t histogram_type,
+
+  void recordInHistogram(uint32_t histogram_type,
                                  uint64_t value) override;
 
   virtual Status Reset() override;

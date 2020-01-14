@@ -9,6 +9,8 @@ cc_library(
         "//include",
         "//options:headers",
         "//port",
+        "//memory:headers",
+        "//test_util:headers"
     ],
     copts = ["-msse4.2", "-mpclmul"],
     visibility = ["//visibility:public"],
@@ -19,6 +21,7 @@ cc_library(
     hdrs = glob(["*.h"], exclude=["testharness.*", "*_test_env.*"]),
     deps = [
         "//port:headers",
+        "//test_util:headers",
 	"//third_party/lz4",
 	"//third_party/snappy",
     ],

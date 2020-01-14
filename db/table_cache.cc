@@ -16,6 +16,7 @@
 
 #include "monitoring/perf_context_imp.h"
 #include "rocksdb/statistics.h"
+#include "rocksdb/perf_context.h"
 #include "table/get_context.h"
 #include "table/internal_iterator.h"
 #include "table/iterator_wrapper.h"
@@ -150,7 +151,7 @@ Status TableCache::FindTable(const EnvOptions& env_options,
                              HistogramImpl* file_read_hist, bool skip_filters,
                              int level,
                              bool prefetch_index_and_filter_in_cache) {
-  PERF_TIMER_GUARD_WITH_ENV(find_table_nanos, ioptions_.env);
+  //PERF_TIMER_GUARD_WITH_ENV(find_table_nanos, ioptions_.env);
   Status s;
   uint64_t number = fd.GetNumber();
   Slice key = GetSliceForFileNumber(&number);

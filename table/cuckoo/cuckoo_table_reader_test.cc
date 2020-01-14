@@ -6,11 +6,11 @@
 #ifndef ROCKSDB_LITE
 
 #ifndef GFLAGS
-#include <cstdio>
-int main() {
-  fprintf(stderr, "Please install gflags to run this test... Skipping...\n");
-  return 0;
-}
+//#include <cstdio>
+//int main() {
+//  fprintf(stderr, "Please install gflags to run this test... Skipping...\n");
+//  return 0;
+//}
 #else
 
 #include <cinttypes>
@@ -544,26 +544,26 @@ TEST_F(CuckooReaderTest, TestReadPerformance) {
 }
 }  // namespace rocksdb
 
-int main(int argc, char** argv) {
-  if (rocksdb::port::kLittleEndian) {
-    ::testing::InitGoogleTest(&argc, argv);
-    ParseCommandLineFlags(&argc, &argv, true);
-    return RUN_ALL_TESTS();
-  }
-  else {
-    fprintf(stderr, "SKIPPED as Cuckoo table doesn't support Big Endian\n");
-    return 0;
-  }
-}
+//int main(int argc, char** argv) {
+//  if (rocksdb::port::kLittleEndian) {
+//    ::testing::InitGoogleTest(&argc, argv);
+//    ParseCommandLineFlags(&argc, &argv, true);
+//    return RUN_ALL_TESTS();
+//  }
+//  else {
+//    fprintf(stderr, "SKIPPED as Cuckoo table doesn't support Big Endian\n");
+//    return 0;
+//  }
+//}
 
 #endif  // GFLAGS.
 
 #else
-#include <stdio.h>
-
-int main(int /*argc*/, char** /*argv*/) {
-  fprintf(stderr, "SKIPPED as Cuckoo table is not supported in ROCKSDB_LITE\n");
-  return 0;
-}
+//#include <stdio.h>
+//
+//int main(int /*argc*/, char** /*argv*/) {
+//  fprintf(stderr, "SKIPPED as Cuckoo table is not supported in ROCKSDB_LITE\n");
+//  return 0;
+//}
 
 #endif  // ROCKSDB_LITE

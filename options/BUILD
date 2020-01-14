@@ -6,7 +6,9 @@ cc_library(
     deps = [
         ":headers",
         "//db:headers",
+        "//logging:headers",
         "//include",
+        "//table:headers"
     ],
     visibility = ["//visibility:public"],
 )

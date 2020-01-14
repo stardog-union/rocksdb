@@ -4,11 +4,11 @@
 //  (found in the LICENSE.Apache file in the root directory).
 
 #ifndef GFLAGS
-#include <cstdio>
-int main() {
-  fprintf(stderr, "Please install gflags to run rocksdb tools\n");
-  return 1;
-}
+//#include <cstdio>
+//int main() {
+//  fprintf(stderr, "Please install gflags to run rocksdb tools\n");
+//  return 1;
+//}
 #else
 
 #include "db/db_impl/db_impl.h"
@@ -274,70 +274,70 @@ DEFINE_string(time_unit, "microsecond",
               "The time unit used for measuring performance. User can specify "
               "`microsecond` (default) or `nanosecond`");
 
-int main(int argc, char** argv) {
-  SetUsageMessage(std::string("\nUSAGE:\n") + std::string(argv[0]) +
-                  " [OPTIONS]...");
-  ParseCommandLineFlags(&argc, &argv, true);
-
-  std::shared_ptr<rocksdb::TableFactory> tf;
-  rocksdb::Options options;
-  if (FLAGS_prefix_len < 16) {
-    options.prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(
-        FLAGS_prefix_len));
-  }
-  rocksdb::ReadOptions ro;
-  rocksdb::EnvOptions env_options;
-  options.create_if_missing = true;
-  options.compression = rocksdb::CompressionType::kNoCompression;
-
-  if (FLAGS_table_factory == "cuckoo_hash") {
-#ifndef ROCKSDB_LITE
-    options.allow_mmap_reads = FLAGS_mmap_read;
-    env_options.use_mmap_reads = FLAGS_mmap_read;
-    rocksdb::CuckooTableOptions table_options;
-    table_options.hash_table_ratio = 0.75;
-    tf.reset(rocksdb::NewCuckooTableFactory(table_options));
-#else
-    fprintf(stderr, "Plain table is not supported in lite mode\n");
-    exit(1);
-#endif  // ROCKSDB_LITE
-  } else if (FLAGS_table_factory == "plain_table") {
-#ifndef ROCKSDB_LITE
-    options.allow_mmap_reads = FLAGS_mmap_read;
-    env_options.use_mmap_reads = FLAGS_mmap_read;
-
-    rocksdb::PlainTableOptions plain_table_options;
-    plain_table_options.user_key_len = 16;
-    plain_table_options.bloom_bits_per_key = (FLAGS_prefix_len == 16) ? 0 : 8;
-    plain_table_options.hash_table_ratio = 0.75;
-
-    tf.reset(new rocksdb::PlainTableFactory(plain_table_options));
-    options.prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(
-        FLAGS_prefix_len));
-#else
-    fprintf(stderr, "Cuckoo table is not supported in lite mode\n");
-    exit(1);
-#endif  // ROCKSDB_LITE
-  } else if (FLAGS_table_factory == "block_based") {
-    tf.reset(new rocksdb::BlockBasedTableFactory());
-  } else {
-    fprintf(stderr, "Invalid table type %s\n", FLAGS_table_factory.c_str());
-  }
-
-  if (tf) {
-    // if user provides invalid options, just fall back to microsecond.
-    bool measured_by_nanosecond = FLAGS_time_unit == "nanosecond";
-
-    options.table_factory = tf;
-    rocksdb::TableReaderBenchmark(options, env_options, ro, FLAGS_num_keys1,
-                                  FLAGS_num_keys2, FLAGS_iter, FLAGS_prefix_len,
-                                  FLAGS_query_empty, FLAGS_iterator,
-                                  FLAGS_through_db, measured_by_nanosecond);
-  } else {
-    return 1;
-  }
-
-  return 0;
-}
+//int main(int argc, char** argv) {
+//  SetUsageMessage(std::string("\nUSAGE:\n") + std::string(argv[0]) +
+//                  " [OPTIONS]...");
+//  ParseCommandLineFlags(&argc, &argv, true);
+//
+//  std::shared_ptr<rocksdb::TableFactory> tf;
+//  rocksdb::Options options;
+//  if (FLAGS_prefix_len < 16) {
+//    options.prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(
+//        FLAGS_prefix_len));
+//  }
+//  rocksdb::ReadOptions ro;
+//  rocksdb::EnvOptions env_options;
+//  options.create_if_missing = true;
+//  options.compression = rocksdb::CompressionType::kNoCompression;
+//
+//  if (FLAGS_table_factory == "cuckoo_hash") {
+//#ifndef ROCKSDB_LITE
+//    options.allow_mmap_reads = FLAGS_mmap_read;
+//    env_options.use_mmap_reads = FLAGS_mmap_read;
+//    rocksdb::CuckooTableOptions table_options;
+//    table_options.hash_table_ratio = 0.75;
+//    tf.reset(rocksdb::NewCuckooTableFactory(table_options));
+//#else
+//    fprintf(stderr, "Plain table is not supported in lite mode\n");
+//    exit(1);
+//#endif  // ROCKSDB_LITE
+//  } else if (FLAGS_table_factory == "plain_table") {
+//#ifndef ROCKSDB_LITE
+//    options.allow_mmap_reads = FLAGS_mmap_read;
+//    env_options.use_mmap_reads = FLAGS_mmap_read;
+//
+//    rocksdb::PlainTableOptions plain_table_options;
+//    plain_table_options.user_key_len = 16;
+//    plain_table_options.bloom_bits_per_key = (FLAGS_prefix_len == 16) ? 0 : 8;
+//    plain_table_options.hash_table_ratio = 0.75;
+//
+//    tf.reset(new rocksdb::PlainTableFactory(plain_table_options));
+//    options.prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(
+//        FLAGS_prefix_len));
+//#else
+//    fprintf(stderr, "Cuckoo table is not supported in lite mode\n");
+//    exit(1);
+//#endif  // ROCKSDB_LITE
+//  } else if (FLAGS_table_factory == "block_based") {
+//    tf.reset(new rocksdb::BlockBasedTableFactory());
+//  } else {
+//    fprintf(stderr, "Invalid table type %s\n", FLAGS_table_factory.c_str());
+//  }
+//
+//  if (tf) {
+//    // if user provides invalid options, just fall back to microsecond.
+//    bool measured_by_nanosecond = FLAGS_time_unit == "nanosecond";
+//
+//    options.table_factory = tf;
+//    rocksdb::TableReaderBenchmark(options, env_options, ro, FLAGS_num_keys1,
+//                                  FLAGS_num_keys2, FLAGS_iter, FLAGS_prefix_len,
+//                                  FLAGS_query_empty, FLAGS_iterator,
+//                                  FLAGS_through_db, measured_by_nanosecond);
+//  } else {
+//    return 1;
+//  }
+//
+//  return 0;
+//}
 
 #endif  // GFLAGS

@@ -264,7 +264,6 @@ MAIN_SOURCES =                                                          \
   db/compact_files_test.cc                                              \
   db/compaction/compaction_iterator_test.cc                             \
   db/compaction/compaction_job_test.cc                                  \
-  db/compaction/compaction_job_stats_test.cc                            \
   db/compaction/compaction_picker_test.cc                               \
   db/comparator_db_test.cc                                              \
   db/corruption_test.cc                                                 \
@@ -289,7 +288,6 @@ MAIN_SOURCES =                                                          \
   db/db_options_test.cc                                                 \
   db/db_properties_test.cc                                              \
   db/db_range_del_test.cc                                               \
-  db/db_impl/db_secondary_test.cc                                       \
   db/db_sst_test.cc                                                     \
   db/db_statistics_test.cc                                              \
   db/db_table_properties_test.cc                                        \
@@ -356,7 +354,6 @@ MAIN_SOURCES =                                                          \
   monitoring/stats_history_test.cc                                      \
   options/options_test.cc                                               \
   table/block_based/block_based_filter_block_test.cc                    \
-  table/block_based/block_test.cc                                       \
   table/block_based/data_block_hash_index_test.cc                       \
   table/block_based/full_filter_block_test.cc                           \
   table/block_based/partitioned_filter_block_test.cc                    \
@@ -366,7 +363,6 @@ MAIN_SOURCES =                                                          \
   table/merger_test.cc                                                  \
   table/sst_file_reader_test.cc                                         \
   table/table_reader_bench.cc                                           \
-  table/table_test.cc                                                   \
   third-party/gtest-1.7.0/fused-src/gtest/gtest-all.cc                  \
   tools/block_cache_trace_analyzer_test.cc                              \
   tools/block_cache_trace_analyzer_tool.cc                              \

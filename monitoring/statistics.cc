@@ -16,6 +16,7 @@
 #include <cstdio>
 #include "port/likely.h"
 #include "rocksdb/statistics.h"
+#include "statistics.h"
 
 namespace rocksdb {
 
@@ -251,6 +252,10 @@ uint64_t StatisticsImpl::getTickerCount(uint32_t tickerType) const {
   return getTickerCountLocked(tickerType);
 }
 
+void StatisticsImpl::recordInHistogram(uint32_t histogram_type, uint64_t value)  {
+    measureTime(histogram_type, value);
+}
+
 uint64_t StatisticsImpl::getTickerCountLocked(uint32_t tickerType) const {
   assert(enable_internal_stats_ ? tickerType < INTERNAL_TICKER_ENUM_MAX
                                 : tickerType < TICKER_ENUM_MAX);
@@ -388,18 +393,6 @@ void StatisticsImpl::recordTick(uint32_t tickerType, uint64_t count) {
   }
   if (stats_ && tickerType < TICKER_ENUM_MAX) {
     stats_->recordTick(tickerType, count);
-  }
-}
-
-void StatisticsImpl::measureTime(uint32_t histogramType, uint64_t value) {
-  assert(enable_internal_stats_ ? histogramType < INTERNAL_HISTOGRAM_ENUM_MAX
-                                : histogramType < HISTOGRAM_ENUM_MAX);
-
-  if (histogramType < HISTOGRAM_ENUM_MAX || enable_internal_stats_) {
-    getThreadHistogramInfo(histogramType)->value.Add(value);
-  }
-  if (stats_ && histogramType < HISTOGRAM_ENUM_MAX) {
-    stats_->measureTime(histogramType, value);
   }
 }
 

@@ -2,7 +2,7 @@ load("//:rocksdb.bzl", "constrained_test")
 
 cc_library(
     name = "monitoring",
-    srcs = glob(["*.cc"], exclude=["*_test.cc"]),
+    srcs = glob(["*.cc", "statistics.h"], exclude=["*_test.cc"]),
     deps = [
         ":headers",
         "//db:headers",

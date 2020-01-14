@@ -7,6 +7,7 @@ cc_library(
         ":headers",
         "//db:headers",
         "//include",
+        "//memory:headers",
     ],
     visibility = ["//visibility:public"],
     alwayslink = 1,

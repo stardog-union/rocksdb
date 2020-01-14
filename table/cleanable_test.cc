@@ -270,8 +270,8 @@ TEST_F(CleanableTest, PinnableSlice) {
 
 }  // namespace rocksdb
 
-int main(int argc, char** argv) {
-  rocksdb::port::InstallStackTraceHandler();
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+//int main(int argc, char** argv) {
+//  rocksdb::port::InstallStackTraceHandler();
+//  ::testing::InitGoogleTest(&argc, argv);
+//  return RUN_ALL_TESTS();
+//}

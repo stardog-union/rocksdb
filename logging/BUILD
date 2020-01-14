@@ -1,37 +1,34 @@
-load("//:rocksdb.bzl", "constrained_library", "constrained_test")
+load("//:rocksdb.bzl", "constrained_test")
 
 COMMON_HDRS = []
 
 PLATFORM_HDRS = select({
     "//:linux" : [
-        "env_chroot.h",
-        "io_posix.h",
-        "mock_env.h"
+        "auto_roll_logger.h",
+        "posix_logger.h",
+        "event_logger.h",
+        "log_buffer.h",
+        "logging.h"
     ],
     "//:osx" : [
-        "env_chroot.h",
-        "io_posix.h",
-        "mock_env.h"
+        "auto_roll_logger.h",
+        "posix_logger.h",
+        "event_logger.h",
+        "log_buffer.h",
+        "logging.h"
     ],
     "//:windows" : [],
 })
 
 COMMON_SRCS = [
-    "env.cc",
-    "env_encryption.cc",
+    "auto_roll_logger.cc",
+    "event_logger.cc",
+    "log_buffer.cc"
 ]
 
 PLATFORM_SRCS = select({
-    "//:linux" : [
-        "env_chroot.cc",
-        "env_posix.cc",
-        "io_posix.cc",
-    ],
-    "//:osx" : [
-        "env_chroot.cc",
-        "env_posix.cc",
-        "io_posix.cc",
-    ],
+    "//:linux" : [],
+    "//:osx" : [],
     "//:windows" : [],
 })
 
@@ -43,14 +40,14 @@ DEFAULT_DEFINES = select({
 })
 
 cc_library(
-    name = "env",
+    name = "logging",
     srcs = COMMON_SRCS + PLATFORM_SRCS,
     deps = [
         ":headers",
         "//include",
         "//options",
-        "//logging:headers",
         "//memory:headers",
+        "//file:headers",
     ],
     visibility = ["//visibility:public"],
     defines = DEFAULT_DEFINES,
@@ -63,21 +60,9 @@ cc_library(
     defines = DEFAULT_DEFINES,
 )
 
-constrained_library(
-    name = "test_utils",
-    hdrs = ["mock_env.h"],
-    srcs = ["mock_env.cc"],
-    deps = [
-        "//db:headers",
-        "//port:headers",
-	"//third_party/gtest",
-    ],
-    visibility = ["//visibility:public"],
-)
-
 constrained_test(
-    name = "env_basic_test",
-    srcs = ["env_basic_test.cc"],
+    name = "auto_roll_logger_test",
+    srcs = ["auto_roll_logger_test.cc"],
     deps = [
         ":env",
         ":test_utils",
@@ -103,35 +88,8 @@ constrained_test(
 )
 
 constrained_test(
-    name = "env_test",
-    srcs = ["env_test.cc"],
-    deps = [
-        ":env",
-        ":test_utils",
-        "//cache",
-        "//db",
-        "//memtable",
-        "//monitoring",
-        "//table",
-        "//table:test_utils",
-        "//third_party/gtest",
-        "//util",
-        "//util:test_utils",
-	"//utilities",
-	"//utilities/backupable",
-	"//utilities/checkpoint",
-	"//utilities/merge_operators",
-	"//utilities/merge_operators/string_append",
-	"//utilities/options",
-	"//utilities/transactions",
-	"//utilities/ttl",
-	"//utilities/write_batch_with_index",
-    ],
-)
-
-constrained_test(
-    name = "mock_env_test",
-    srcs = ["mock_env_test.cc"],
+    name = "event_logger_test",
+    srcs = ["event_logger_test.cc"],
     deps = [
         ":env",
         ":test_utils",

@@ -633,17 +633,17 @@ TEST_F(CuckooBuilderTest, FailWhenSameKeyInserted) {
 }
 }  // namespace rocksdb
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+//int main(int argc, char** argv) {
+//  ::testing::InitGoogleTest(&argc, argv);
+//  return RUN_ALL_TESTS();
+//}
 
 #else
-#include <stdio.h>
-
-int main(int /*argc*/, char** /*argv*/) {
-  fprintf(stderr, "SKIPPED as Cuckoo table is not supported in ROCKSDB_LITE\n");
-  return 0;
-}
+//#include <stdio.h>
+//
+//int main(int /*argc*/, char** /*argv*/) {
+//  fprintf(stderr, "SKIPPED as Cuckoo table is not supported in ROCKSDB_LITE\n");
+//  return 0;
+//}
 
 #endif  // ROCKSDB_LITE

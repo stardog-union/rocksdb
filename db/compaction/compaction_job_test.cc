@@ -1055,18 +1055,18 @@ TEST_F(CompactionJobTest, SnapshotRefresh) {
 
 }  // namespace rocksdb
 
-int main(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
+//int main(int argc, char** argv) {
+//  ::testing::InitGoogleTest(&argc, argv);
+//  return RUN_ALL_TESTS();
+//}
 
 #else
-#include <stdio.h>
+//#include <stdio.h>
 
-int main(int /*argc*/, char** /*argv*/) {
-  fprintf(stderr,
-          "SKIPPED as CompactionJobStats is not supported in ROCKSDB_LITE\n");
-  return 0;
-}
+//int main(int /*argc*/, char** /*argv*/) {
+//  fprintf(stderr,
+//          "SKIPPED as CompactionJobStats is not supported in ROCKSDB_LITE\n");
+//  return 0;
+//}
 
 #endif  // ROCKSDB_LITE

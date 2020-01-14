@@ -877,7 +877,6 @@ if(WITH_TESTS)
         cache/lru_cache_test.cc
         db/column_family_test.cc
         db/compact_files_test.cc
-        db/compaction/compaction_job_stats_test.cc
         db/compaction/compaction_job_test.cc
         db/compaction/compaction_iterator_test.cc
         db/compaction/compaction_picker_test.cc
@@ -903,7 +902,6 @@ if(WITH_TESTS)
         db/db_options_test.cc
         db/db_properties_test.cc
         db/db_range_del_test.cc
-        db/db_impl/db_secondary_test.cc
         db/db_sst_test.cc
         db/db_statistics_test.cc
         db/db_table_properties_test.cc
@@ -961,7 +959,6 @@ if(WITH_TESTS)
         options/options_settable_test.cc
         options/options_test.cc
         table/block_based/block_based_filter_block_test.cc
-        table/block_based/block_test.cc
         table/block_based/data_block_hash_index_test.cc
         table/block_based/full_filter_block_test.cc
         table/block_based/partitioned_filter_block_test.cc
@@ -970,7 +967,6 @@ if(WITH_TESTS)
         table/cuckoo/cuckoo_table_reader_test.cc
         table/merger_test.cc
         table/sst_file_reader_test.cc
-        table/table_test.cc
         tools/block_cache_trace_analyzer_test.cc
         tools/ldb_cmd_test.cc
         tools/reduce_levels_test.cc
