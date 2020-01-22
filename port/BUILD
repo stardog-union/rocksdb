@@ -66,7 +66,7 @@ PLATFORM_SRCS = select({
     "//:osx" : [
         "port_posix.cc",
     ],
-    "//:windows" : glob(["win/*.cc"]),
+    "//:windows" : glob(["win/*.cc"], exclude = ["win/win_jemalloc.cc"]),
 })
 
 cc_library(
