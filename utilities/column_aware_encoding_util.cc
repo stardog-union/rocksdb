@@ -17,8 +17,8 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
-#include "include/rocksdb/comparator.h"
-#include "include/rocksdb/slice.h"
+#include "rocksdb/comparator.h"
+#include "rocksdb/slice.h"
 #include "rocksdb/env.h"
 #include "rocksdb/status.h"
 #include "table/block_based_table_builder.h"
