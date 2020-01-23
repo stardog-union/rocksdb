@@ -215,7 +215,8 @@ static Status ValidateOptions(
   if (db_options.unordered_write &&
       !db_options.allow_concurrent_memtable_write) {
     return Status::InvalidArgument(
-        "unordered_write is incompatible with !allow_concurrent_memtable_write");
+        "unordered_write is incompatible with "
+        "!allow_concurrent_memtable_write");
   }
 
   if (db_options.unordered_write && db_options.enable_pipelined_write) {
@@ -1095,6 +1096,45 @@ Status DB::Open(const DBOptions& db_options, const std::string& dbname,
   const bool kBatchPerTxn = true;
   return DBImpl::Open(db_options, dbname, column_families, handles, dbptr,
                       !kSeqPerBatch, kBatchPerTxn);
+}
+
+Status DBImpl::CreateWAL(uint64_t log_file_num, uint64_t recycle_log_number,
+                         size_t preallocate_block_size, log::Writer** new_log) {
+  Status s;
+  std::unique_ptr<WritableFile> lfile;
+
+  DBOptions db_options =
+      BuildDBOptions(immutable_db_options_, mutable_db_options_);
+  EnvOptions opt_env_options =
+      env_->OptimizeForLogWrite(env_options_, db_options);
+  std::string log_fname =
+      LogFileName(immutable_db_options_.wal_dir, log_file_num);
+
+  if (recycle_log_number) {
+    ROCKS_LOG_INFO(immutable_db_options_.info_log,
+                   "reusing log %" PRIu64 " from recycle list\n",
+                   recycle_log_number);
+    std::string old_log_fname =
+        LogFileName(immutable_db_options_.wal_dir, recycle_log_number);
+    s = env_->ReuseWritableFile(log_fname, old_log_fname, &lfile,
+                                opt_env_options);
+  } else {
+    s = NewWritableFile(env_, log_fname, &lfile, opt_env_options);
+  }
+
+  if (s.ok()) {
+    lfile->SetWriteLifeTimeHint(CalculateWALWriteHint());
+    lfile->SetPreallocationBlockSize(preallocate_block_size);
+
+    const auto& listeners = immutable_db_options_.listeners;
+    std::unique_ptr<WritableFileWriter> file_writer(
+        new WritableFileWriter(std::move(lfile), log_fname, opt_env_options,
+                               nullptr, listeners));
+    *new_log = new log::Writer(std::move(file_writer), log_file_num,
+                               immutable_db_options_.recycle_log_file_num > 0,
+                               immutable_db_options_.manual_wal_flush);
+  }
+  return s;
 }
 
 Status DBImpl::Open(const DBOptions& db_options, const std::string& dbname,

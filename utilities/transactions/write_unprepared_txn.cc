@@ -328,7 +328,8 @@ Status WriteUnpreparedTxn::CommitInternal() {
     explicit PublishSeqPreReleaseCallback(DBImpl* db_impl)
         : db_impl_(db_impl) {}
     virtual Status Callback(SequenceNumber seq, bool is_mem_disabled
-                            __attribute__((__unused__))) override {
+                            __attribute__((__unused__)),
+                            uint64_t log_number) override {
       assert(is_mem_disabled);
       assert(db_impl_->immutable_db_options().two_write_queues);
       db_impl_->SetLastPublishedSequence(seq);

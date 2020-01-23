@@ -26,7 +26,8 @@ class PreReleaseCallback {
   // released.
   // is_mem_disabled is currently used for debugging purposes to assert that
   // the callback is done from the right write queue.
-  virtual Status Callback(SequenceNumber seq, bool is_mem_disabled) = 0;
+  virtual Status Callback(SequenceNumber seq, bool is_mem_disabled,
+                          uint64_t log_number) = 0;
 };
 
 }  //  namespace rocksdb

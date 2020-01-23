@@ -82,7 +82,11 @@ class DBImpl : public DB {
   using DB::Resume;
   virtual Status Resume() override;
 
-  // Implementations of the DB interface
+  Status CreateWAL(uint64_t log_file_num, uint64_t recycle_log_number,
+                     size_t preallocate_block_size, log::Writer** new_log);
+
+
+    // Implementations of the DB interface
   using DB::Put;
   virtual Status Put(const WriteOptions& options,
                      ColumnFamilyHandle* column_family, const Slice& key,

@@ -174,7 +174,8 @@ Status WriteUnpreparedTxnDB::Initialize(
     explicit CommitSubBatchPreReleaseCallback(WritePreparedTxnDB* db)
         : db_(db) {}
     virtual Status Callback(SequenceNumber commit_seq,
-                            bool is_mem_disabled) override {
+                            bool is_mem_disabled,
+                            uint64_t log_number) override {
 #ifdef NDEBUG
       (void)is_mem_disabled;
 #endif

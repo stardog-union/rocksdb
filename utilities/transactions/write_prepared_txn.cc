@@ -180,7 +180,7 @@ Status WritePreparedTxn::CommitInternal() {
    public:
     explicit PublishSeqPreReleaseCallback(DBImpl* db_impl)
         : db_impl_(db_impl) {}
-    virtual Status Callback(SequenceNumber seq, bool is_mem_disabled) override {
+    virtual Status Callback(SequenceNumber seq, bool is_mem_disabled,uint64_t log_number) override {
 #ifdef NDEBUG
       (void)is_mem_disabled;
 #endif

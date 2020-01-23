@@ -60,7 +60,9 @@ class WriteUnpreparedCommitEntryPreReleaseCallback : public PreReleaseCallback {
   }
 
   virtual Status Callback(SequenceNumber commit_seq, bool is_mem_disabled
-                          __attribute__((__unused__))) override {
+                          __attribute__((__unused__)),
+                          uint64_t log_number
+                          ) override {
     const uint64_t last_commit_seq = LIKELY(data_batch_cnt_ <= 1)
                                          ? commit_seq
                                          : commit_seq + data_batch_cnt_ - 1;

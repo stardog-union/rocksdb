@@ -643,7 +643,8 @@ class AddPreparedCallback : public PreReleaseCallback {
     (void)two_write_queues_;  // to silence unused private field warning
   }
   virtual Status Callback(SequenceNumber prepare_seq,
-                          bool is_mem_disabled) override {
+                          bool is_mem_disabled,
+                          uint64_t log_number) override {
 #ifdef NDEBUG
     (void)is_mem_disabled;
 #endif
@@ -682,7 +683,8 @@ class WritePreparedCommitEntryPreReleaseCallback : public PreReleaseCallback {
   }
 
   virtual Status Callback(SequenceNumber commit_seq,
-                          bool is_mem_disabled) override {
+                          bool is_mem_disabled,
+                          uint64_t log_number) override {
 #ifdef NDEBUG
     (void)is_mem_disabled;
 #endif
