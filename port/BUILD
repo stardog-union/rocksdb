@@ -75,6 +75,8 @@ cc_library(
     deps = [
         ":headers",
         "//util:headers",
+        "//monitoring:headers",
+        "//include:include",
     ],
     visibility = ["//visibility:public"],
     defines = DEFAULT_DEFINES,
