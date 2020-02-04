@@ -112,7 +112,14 @@ class DBImpl : public DB {
                      ColumnFamilyHandle* column_family, const Slice& key,
                      PinnableSlice* value) override;
 
-  // Function that Get and KeyMayExist call with no_io true or false
+  using DB::WriteWal;
+  virtual Status WriteWal(WriteBatch* updates,uint64_t last_sequence) override;
+
+  using DB::UnOrderedWrite;
+  virtual Status UnOrderedWrite(const WriteOptions& options, WriteBatch* updates,
+                                uint64_t* last_sequence) override;
+
+    // Function that Get and KeyMayExist call with no_io true or false
   // Note: 'value_found' from KeyMayExist propagates here
   Status GetImpl(const ReadOptions& options, ColumnFamilyHandle* column_family,
                  const Slice& key, PinnableSlice* value,

@@ -55,6 +55,30 @@ Status DBImpl::Write(const WriteOptions& write_options, WriteBatch* my_batch) {
   return WriteImpl(write_options, my_batch, nullptr, nullptr);
 }
 
+Status DBImpl::WriteWal(WriteBatch* updates, uint64_t last_sequence) {
+    const size_t sub_batch_cnt = WriteBatchInternal::Count(updates);
+    uint64_t seq = last_sequence;
+    WriteOptions aWriteOptions{};
+
+    // Use a write thread to i) optimize for WAL write, ii) publish last
+    // sequence in in increasing order, iii) call pre_release_callback serially
+    return WriteImplWALOnly(&write_thread_, aWriteOptions, updates, nullptr,
+                            nullptr, 0, &seq, sub_batch_cnt,
+                            nullptr, kDoAssignOrder,
+                            kDoPublishLastSeq, true);
+}
+
+Status DBImpl::UnOrderedWrite(const WriteOptions& options, WriteBatch* updates,
+                              uint64_t* last_sequence) {
+    const size_t sub_batch_cnt = WriteBatchInternal::Count(updates);
+
+    *(last_sequence) = versions_->FetchAddLastAllocatedSequence(sub_batch_cnt) + 1;
+    return UnorderedWriteMemtable(options, updates, nullptr,
+                                  0,
+                                  *(last_sequence),
+                                  sub_batch_cnt);
+}
+
 #ifndef ROCKSDB_LITE
 Status DBImpl::WriteWithCallback(const WriteOptions& write_options,
                                  WriteBatch* my_batch,

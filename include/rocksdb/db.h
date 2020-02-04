@@ -316,6 +316,15 @@ class DB {
   // Note: consider setting options.sync = true.
   virtual Status Write(const WriteOptions& options, WriteBatch* updates) = 0;
 
+  virtual Status WriteWal(WriteBatch* updates,uint64_t last_sequence) {
+      return Status::NotSupported();
+  }
+
+  virtual Status UnOrderedWrite(const WriteOptions& options, WriteBatch* updates,
+                                uint64_t* last_sequence) {
+      return Status::NotSupported();
+  }
+
   // If the database contains an entry for "key" store the
   // corresponding value in *value and return OK.
   //
