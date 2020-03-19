@@ -24,6 +24,7 @@ PLATFORM_DEFINES = select({
     "//:windows": [
         "OS_WIN",
         "NPERF_CONTEXT",
+        "_WIN32_WINNT=_WIN32_WINNT_VISTA",
     ],
     "//conditions:default": [],
 })
