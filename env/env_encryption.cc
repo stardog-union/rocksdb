@@ -71,14 +71,14 @@ class EncryptedSequentialFile : public SequentialFile {
 
   // Indicates the upper layers if the current SequentialFile implementation
   // uses direct IO.
-  virtual bool use_direct_io() const override { 
-    return file_->use_direct_io(); 
+  virtual bool use_direct_io() const override {
+    return file_->use_direct_io();
   }
 
   // Use the returned alignment value to allocate
   // aligned buffer for Direct I/O
-  virtual size_t GetRequiredBufferAlignment() const override { 
-    return file_->GetRequiredBufferAlignment(); 
+  virtual size_t GetRequiredBufferAlignment() const override {
+    return file_->GetRequiredBufferAlignment();
   }
 
   // Remove any kind of caching of data from the offset to offset+length
@@ -168,13 +168,13 @@ class EncryptedRandomAccessFile : public RandomAccessFile {
   // Indicates the upper layers if the current RandomAccessFile implementation
   // uses direct IO.
   virtual bool use_direct_io() const override {
-     return file_->use_direct_io(); 
+     return file_->use_direct_io();
   }
 
   // Use the returned alignment value to allocate
   // aligned buffer for Direct I/O
-  virtual size_t GetRequiredBufferAlignment() const override { 
-    return file_->GetRequiredBufferAlignment(); 
+  virtual size_t GetRequiredBufferAlignment() const override {
+    return file_->GetRequiredBufferAlignment();
   }
 
   // Remove any kind of caching of data from the offset to offset+length
@@ -199,10 +199,10 @@ class EncryptedWritableFile : public WritableFileWrapper {
   EncryptedWritableFile(WritableFile* f, BlockAccessCipherStream* s, size_t prefixLength)
     : WritableFileWrapper(f), file_(f), stream_(s), prefixLength_(prefixLength) { }
 
-  Status Append(const Slice& data) override { 
+  Status Append(const Slice& data) override {
     AlignedBuffer buf;
     Status status;
-    Slice dataToAppend(data); 
+    Slice dataToAppend(data);
     if (data.size() > 0) {
       auto offset = file_->GetFileSize(); // size including prefix
       // Encrypt in cloned buffer
@@ -215,7 +215,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
       }
       dataToAppend = Slice(buf.BufferStart(), data.size());
     }
-    status = file_->Append(dataToAppend); 
+    status = file_->Append(dataToAppend);
     if (!status.ok()) {
       return status;
     }
@@ -225,7 +225,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
   Status PositionedAppend(const Slice& data, uint64_t offset) override {
     AlignedBuffer buf;
     Status status;
-    Slice dataToAppend(data); 
+    Slice dataToAppend(data);
     offset += prefixLength_;
     if (data.size() > 0) {
       // Encrypt in cloned buffer
@@ -251,7 +251,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
 
   // Use the returned alignment value to allocate
   // aligned buffer for Direct I/O
-  virtual size_t GetRequiredBufferAlignment() const override { return file_->GetRequiredBufferAlignment(); } 
+  virtual size_t GetRequiredBufferAlignment() const override { return file_->GetRequiredBufferAlignment(); }
 
     /*
    * Get the size of valid data in the file.
@@ -282,7 +282,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
   // This asks the OS to initiate flushing the cached data to disk,
   // without waiting for completion.
   // Default implementation does nothing.
-  virtual Status RangeSync(uint64_t offset, uint64_t nbytes) override { 
+  virtual Status RangeSync(uint64_t offset, uint64_t nbytes) override {
     return file_->RangeSync(offset + prefixLength_, nbytes);
   }
 
@@ -318,8 +318,8 @@ class EncryptedRandomRWFile : public RandomRWFile {
 
   // Use the returned alignment value to allocate
   // aligned buffer for Direct I/O
-  virtual size_t GetRequiredBufferAlignment() const override { 
-    return file_->GetRequiredBufferAlignment(); 
+  virtual size_t GetRequiredBufferAlignment() const override {
+    return file_->GetRequiredBufferAlignment();
   }
 
   // Write bytes in `data` at  offset `offset`, Returns Status::OK() on success.
@@ -327,7 +327,7 @@ class EncryptedRandomRWFile : public RandomRWFile {
   virtual Status Write(uint64_t offset, const Slice& data) override {
     AlignedBuffer buf;
     Status status;
-    Slice dataToWrite(data); 
+    Slice dataToWrite(data);
     offset += prefixLength_;
     if (data.size() > 0) {
       // Encrypt in cloned buffer
@@ -347,7 +347,7 @@ class EncryptedRandomRWFile : public RandomRWFile {
   // Read up to `n` bytes starting from offset `offset` and store them in
   // result, provided `scratch` size should be at least `n`.
   // Returns Status::OK() on success.
-  virtual Status Read(uint64_t offset, size_t n, Slice* result, char* scratch) const override { 
+  virtual Status Read(uint64_t offset, size_t n, Slice* result, char* scratch) const override {
     assert(scratch);
     offset += prefixLength_;
     auto status = file_->Read(offset, n, result, scratch);
@@ -366,7 +366,7 @@ class EncryptedRandomRWFile : public RandomRWFile {
     return file_->Sync();
   }
 
-  virtual Status Fsync() override { 
+  virtual Status Fsync() override {
     return file_->Fsync();
   }
 
@@ -402,7 +402,7 @@ class EncryptedEnv : public EnvWrapper {
     Slice prefixSlice;
     size_t prefixLength = provider_->GetPrefixLength();
     if (prefixLength > 0) {
-      // Read prefix 
+      // Read prefix
       prefixBuf.Alignment(underlying->GetRequiredBufferAlignment());
       prefixBuf.AllocateNewBuffer(prefixLength);
       status = underlying->Read(prefixLength, &prefixSlice, prefixBuf.BufferStart());
@@ -439,7 +439,7 @@ class EncryptedEnv : public EnvWrapper {
     Slice prefixSlice;
     size_t prefixLength = provider_->GetPrefixLength();
     if (prefixLength > 0) {
-      // Read prefix 
+      // Read prefix
       prefixBuf.Alignment(underlying->GetRequiredBufferAlignment());
       prefixBuf.AllocateNewBuffer(prefixLength);
       status = underlying->Read(0, prefixLength, &prefixSlice, prefixBuf.BufferStart());
@@ -476,12 +476,12 @@ class EncryptedEnv : public EnvWrapper {
     Slice prefixSlice;
     size_t prefixLength = provider_->GetPrefixLength();
     if (prefixLength > 0) {
-      // Initialize prefix 
+      // Initialize prefix
       prefixBuf.Alignment(underlying->GetRequiredBufferAlignment());
       prefixBuf.AllocateNewBuffer(prefixLength);
       provider_->CreateNewPrefix(fname, prefixBuf.BufferStart(), prefixLength);
       prefixSlice = Slice(prefixBuf.BufferStart(), prefixLength);
-      // Write prefix 
+      // Write prefix
       status = underlying->Append(prefixSlice);
       if (!status.ok()) {
         return status;
@@ -522,12 +522,12 @@ class EncryptedEnv : public EnvWrapper {
     Slice prefixSlice;
     size_t prefixLength = provider_->GetPrefixLength();
     if (prefixLength > 0) {
-      // Initialize prefix 
+      // Initialize prefix
       prefixBuf.Alignment(underlying->GetRequiredBufferAlignment());
       prefixBuf.AllocateNewBuffer(prefixLength);
       provider_->CreateNewPrefix(fname, prefixBuf.BufferStart(), prefixLength);
       prefixSlice = Slice(prefixBuf.BufferStart(), prefixLength);
-      // Write prefix 
+      // Write prefix
       status = underlying->Append(prefixSlice);
       if (!status.ok()) {
         return status;
@@ -563,12 +563,12 @@ class EncryptedEnv : public EnvWrapper {
     Slice prefixSlice;
     size_t prefixLength = provider_->GetPrefixLength();
     if (prefixLength > 0) {
-      // Initialize prefix 
+      // Initialize prefix
       prefixBuf.Alignment(underlying->GetRequiredBufferAlignment());
       prefixBuf.AllocateNewBuffer(prefixLength);
       provider_->CreateNewPrefix(fname, prefixBuf.BufferStart(), prefixLength);
       prefixSlice = Slice(prefixBuf.BufferStart(), prefixLength);
-      // Write prefix 
+      // Write prefix
       status = underlying->Append(prefixSlice);
       if (!status.ok()) {
         return status;
@@ -619,10 +619,10 @@ class EncryptedEnv : public EnvWrapper {
           return status;
         }
       } else {
-        // File is new, initialize & write prefix 
+        // File is new, initialize & write prefix
         provider_->CreateNewPrefix(fname, prefixBuf.BufferStart(), prefixLength);
         prefixSlice = Slice(prefixBuf.BufferStart(), prefixLength);
-        // Write prefix 
+        // Write prefix
         status = underlying->Write(0, prefixSlice);
         if (!status.ok()) {
           return status;
@@ -671,7 +671,7 @@ class EncryptedEnv : public EnvWrapper {
     size_t prefixLength = provider_->GetPrefixLength();
     assert(*file_size >= prefixLength);
     *file_size -= prefixLength;
-    return Status::OK();    
+    return Status::OK();
   }
 
  private:
@@ -679,7 +679,7 @@ class EncryptedEnv : public EnvWrapper {
 };
 
 
-// Returns an Env that encrypts data when stored on disk and decrypts data when 
+// Returns an Env that encrypts data when stored on disk and decrypts data when
 // read from disk.
 Env* NewEncryptedEnv(Env* base_env, EncryptionProvider* provider) {
   return new EncryptedEnv(base_env, provider);
@@ -702,14 +702,14 @@ Status BlockAccessCipherStream::Encrypt(uint64_t fileOffset, char *data, size_t 
     char *block = data;
     size_t n = std::min(dataSize, blockSize - blockOffset);
     if (n != blockSize) {
-      // We're not encrypting a full block. 
+      // We're not encrypting a full block.
       // Copy data to blockBuffer
       if (!blockBuffer.get()) {
         // Allocate buffer
         blockBuffer = std::unique_ptr<char[]>(new char[blockSize]);
       }
       block = blockBuffer.get();
-      // Copy plain data to block buffer 
+      // Copy plain data to block buffer
       memmove(block + blockOffset, data, n);
     }
     auto status = EncryptBlock(blockIndex, block, (char*)scratch.data());
@@ -747,14 +747,14 @@ Status BlockAccessCipherStream::Decrypt(uint64_t fileOffset, char *data, size_t 
     char *block = data;
     size_t n = std::min(dataSize, blockSize - blockOffset);
     if (n != blockSize) {
-      // We're not decrypting a full block. 
+      // We're not decrypting a full block.
       // Copy data to blockBuffer
       if (!blockBuffer.get()) {
         // Allocate buffer
         blockBuffer = std::unique_ptr<char[]>(new char[blockSize]);
       }
       block = blockBuffer.get();
-      // Copy encrypted data to block buffer 
+      // Copy encrypted data to block buffer
       memmove(block + blockOffset, data, n);
     }
     auto status = DecryptBlock(blockIndex, block, (char*)scratch.data());
@@ -805,7 +805,7 @@ Status CTRCipherStream::EncryptBlock(uint64_t blockIndex, char *data, char* scra
   memmove(scratch, iv_.data(), blockSize);
   EncodeFixed64(scratch, blockIndex + initialCounter_);
 
-  // Encrypt nonce+counter 
+  // Encrypt nonce+counter
   auto status = cipher_.Encrypt(scratch);
   if (!status.ok()) {
     return status;
@@ -821,13 +821,13 @@ Status CTRCipherStream::EncryptBlock(uint64_t blockIndex, char *data, char* scra
 // Decrypt a block of data at the given block index.
 // Length of data is equal to BlockSize();
 Status CTRCipherStream::DecryptBlock(uint64_t blockIndex, char *data, char* scratch) {
-  // For CTR decryption & encryption are the same 
+  // For CTR decryption & encryption are the same
   return EncryptBlock(blockIndex, data, scratch);
 }
 
 // GetPrefixLength returns the length of the prefix that is added to every file
 // and used for storing encryption options.
-// For optimal performance, the prefix length should be a multiple of 
+// For optimal performance, the prefix length should be a multiple of
 // the page size.
 size_t CTREncryptionProvider::GetPrefixLength() {
   return defaultPrefixLength;
@@ -842,7 +842,7 @@ static void decodeCTRParameters(const char *prefix, size_t blockSize, uint64_t &
   iv = Slice(prefix + blockSize, blockSize);
 }
 
-// CreateNewPrefix initialized an allocated block of prefix memory 
+// CreateNewPrefix initialized an allocated block of prefix memory
 // for a new file.
 Status CTREncryptionProvider::CreateNewPrefix(const std::string& /*fname*/,
                                               char* prefix,
@@ -871,7 +871,7 @@ Status CTREncryptionProvider::CreateNewPrefix(const std::string& /*fname*/,
   return Status::OK();
 }
 
-// PopulateSecretPrefixPart initializes the data into a new prefix block 
+// PopulateSecretPrefixPart initializes the data into a new prefix block
 // in plain text.
 // Returns the amount of space (starting from the start of the prefix)
 // that has been initialized.
@@ -898,7 +898,7 @@ Status CTREncryptionProvider::CreateCipherStream(
     return status;
   }
 
-  // Create cipher stream 
+  // Create cipher stream
   return CreateCipherStreamFromPrefix(fname, options, initialCounter, iv, prefix, result);
 }
 
@@ -912,6 +912,8 @@ Status CTREncryptionProvider::CreateCipherStreamFromPrefix(
       new CTRCipherStream(cipher_, iv.data(), initialCounter));
   return Status::OK();
 }
+
+#include "env_encrypt_2.h"
 
 #endif // ROCKSDB_LITE
 
