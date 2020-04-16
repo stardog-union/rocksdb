@@ -50,11 +50,11 @@ class AESBlockAccessCipherStream : public BlockAccessCipherStream {
 
   // Encrypt one or more (partial) blocks of data at the file offset.
   // Length of data is given in dataSize.
-  virtual Status Encrypt(uint64_t fileOffset, char *data, size_t dataSize);
+  virtual Status Encrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
 
   // Decrypt one or more (partial) blocks of data at the file offset.
   // Length of data is given in dataSize.
-  virtual Status Decrypt(uint64_t fileOffset, char *data, size_t dataSize);
+  virtual Status Decrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
 
 protected:
   // Allocate scratch space which is passed to EncryptBlock/DecryptBlock.
@@ -62,11 +62,11 @@ protected:
 
   // Encrypt a block of data at the given block index.
   // Length of data is equal to BlockSize();
-  virtual Status EncryptBlock(uint64_t blockIndex, char *data, char* scratch);// {return Status::OK();}
+  virtual Status EncryptBlock(uint64_t /*blockIndex*/, char */*data*/, char* /*scratch*/) {return Status::OK();}
 
   // Decrypt a block of data at the given block index.
   // Length of data is equal to BlockSize();
-  virtual Status DecryptBlock(uint64_t blockIndex, char *data, char* scratch);// {return Status::OK();}
+  virtual Status DecryptBlock(uint64_t /*blockIndex*/, char */*data*/, char* /*scratch*/) {return Status::OK();}
 
   const AES_KEY & key_;  // should we have a copy of this?
       uint8_t code_version_;
@@ -123,9 +123,9 @@ protected:
 
 class EncryptedEnv2 : public EnvWrapper {
  public:
-  EncryptedEnv2(Env* base_env, std::map<Sha1Description_t,
-                std::shared_ptr<EncryptionProvider>> && encrypt_read,
-                std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> && encrypt_write)
+  EncryptedEnv2(Env* base_env,
+                std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
+                std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write)
     : EnvWrapper(base_env), encrypt_read_(encrypt_read), encrypt_write_(encrypt_write) {
     RAND_poll();
   }
@@ -596,8 +596,8 @@ protected:
 // Returns an Env that encrypts data when stored on disk and decrypts data when
 // read from disk.
 Env* NewEncryptedEnv2(Env* base_env,
-                      std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> & encrypt_read,
-                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> & encrypt_write) {
+                      std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
+                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write) {
   return new EncryptedEnv2(base_env, encrypt_read, encrypt_write);
 }
 
