@@ -9,6 +9,7 @@
 
 #include "env/mock_env.h"
 #include "rocksdb/env.h"
+#include "rocksdb/env_encryption.h"
 #include "rocksdb/utilities/object_registry.h"
 #include "util/testharness.h"
 
@@ -90,6 +91,20 @@ INSTANTIATE_TEST_CASE_P(EnvDefault, EnvMoreTestWithParam,
 static std::unique_ptr<Env> mock_env(new MockEnv(Env::Default()));
 INSTANTIATE_TEST_CASE_P(MockEnv, EnvBasicTestWithParam,
                         ::testing::Values(mock_env.get()));
+
+// next four statements run env on test default encryption code.
+static ROT13BlockCipher encrypt_block_rot13(32);
+
+static CTREncryptionProvider encrypt_provider_ctr(encrypt_block_rot13);
+
+static std::unique_ptr<Env> encrypt_env(new NormalizingEnvWrapper(NewEncryptedEnv(
+                                                                    Env::Default(),&encrypt_provider_ctr)));
+INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvBasicTestWithParam,
+                        ::testing::Values(encrypt_env.get()));
+INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvMoreTestWithParam,
+                        ::testing::Values(encrypt_env.get()));
+
+
 #ifndef ROCKSDB_LITE
 static std::unique_ptr<Env> mem_env(NewMemEnv(Env::Default()));
 INSTANTIATE_TEST_CASE_P(MemEnv, EnvBasicTestWithParam,
