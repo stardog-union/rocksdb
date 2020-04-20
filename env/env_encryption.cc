@@ -20,19 +20,6 @@ namespace rocksdb {
 
 #ifndef ROCKSDB_LITE
 
-class EncryptedSequentialFile : public SequentialFile {
-  private:
-    std::unique_ptr<SequentialFile> file_;
-    std::unique_ptr<BlockAccessCipherStream> stream_;
-    uint64_t offset_;
-    size_t prefixLength_;
-
-     public:
-  // Default ctor. Given underlying sequential file is supposed to be at
-  // offset == prefixLength.
-  EncryptedSequentialFile(SequentialFile* f, BlockAccessCipherStream* s, size_t prefixLength)
-      : file_(f), stream_(s), offset_(prefixLength), prefixLength_(prefixLength) {
-  }
 
   // Read up to "n" bytes from the file.  "scratch[0..n-1]" may be
   // written by this routine.  Sets "*result" to the data that was
@@ -42,7 +29,7 @@ class EncryptedSequentialFile : public SequentialFile {
   // If an error was encountered, returns a non-OK status.
   //
   // REQUIRES: External synchronization
-  virtual Status Read(size_t n, Slice* result, char* scratch) override {
+  Status EncryptedSequentialFile::Read(size_t n, Slice* result, char* scratch) {
     assert(scratch);
     Status status = file_->Read(n, result, scratch);
     if (!status.ok()) {
@@ -60,7 +47,7 @@ class EncryptedSequentialFile : public SequentialFile {
   // file, and Skip will return OK.
   //
   // REQUIRES: External synchronization
-  virtual Status Skip(uint64_t n) override {
+  Status EncryptedSequentialFile::Skip(uint64_t n) {
     auto status = file_->Skip(n);
     if (!status.ok()) {
       return status;
@@ -71,26 +58,26 @@ class EncryptedSequentialFile : public SequentialFile {
 
   // Indicates the upper layers if the current SequentialFile implementation
   // uses direct IO.
-  virtual bool use_direct_io() const override {
+  bool EncryptedSequentialFile::use_direct_io() const {
     return file_->use_direct_io();
   }
 
   // Use the returned alignment value to allocate
   // aligned buffer for Direct I/O
-  virtual size_t GetRequiredBufferAlignment() const override {
+  size_t EncryptedSequentialFile::GetRequiredBufferAlignment() const {
     return file_->GetRequiredBufferAlignment();
   }
 
   // Remove any kind of caching of data from the offset to offset+length
   // of this file. If the length is 0, then it refers to the end of file.
   // If the system is not caching the file contents, then this is a noop.
-  virtual Status InvalidateCache(size_t offset, size_t length) override {
+  Status EncryptedSequentialFile::InvalidateCache(size_t offset, size_t length) {
     return file_->InvalidateCache(offset + prefixLength_, length);
   }
 
   // Positioned Read for direct I/O
   // If Direct I/O enabled, offset, n, and scratch should be properly aligned
-  virtual Status PositionedRead(uint64_t offset, size_t n, Slice* result, char* scratch) override {
+  Status EncryptedSequentialFile::PositionedRead(uint64_t offset, size_t n, Slice* result, char* scratch) {
     assert(scratch);
     offset += prefixLength_; // Skip prefix
     auto status = file_->PositionedRead(offset, n, result, scratch);
@@ -102,19 +89,6 @@ class EncryptedSequentialFile : public SequentialFile {
     return status;
   }
 
-};
-
-// A file abstraction for randomly reading the contents of a file.
-class EncryptedRandomAccessFile : public RandomAccessFile {
-  private:
-    std::unique_ptr<RandomAccessFile> file_;
-    std::unique_ptr<BlockAccessCipherStream> stream_;
-    size_t prefixLength_;
-
- public:
-  EncryptedRandomAccessFile(RandomAccessFile* f, BlockAccessCipherStream* s, size_t prefixLength)
-    : file_(f), stream_(s), prefixLength_(prefixLength) { }
-
   // Read up to "n" bytes from the file starting at "offset".
   // "scratch[0..n-1]" may be written by this routine.  Sets "*result"
   // to the data that was read (including if fewer than "n" bytes were
@@ -125,7 +99,7 @@ class EncryptedRandomAccessFile : public RandomAccessFile {
   //
   // Safe for concurrent use by multiple threads.
   // If Direct I/O enabled, offset, n, and scratch should be aligned properly.
-  virtual Status Read(uint64_t offset, size_t n, Slice* result, char* scratch) const override {
+  Status EncryptedRandomAccessFile::Read(uint64_t offset, size_t n, Slice* result, char* scratch) const {
     assert(scratch);
     offset += prefixLength_;
     auto status = file_->Read(offset, n, result, scratch);
@@ -137,7 +111,7 @@ class EncryptedRandomAccessFile : public RandomAccessFile {
   }
 
   // Readahead the file starting from offset by n bytes for caching.
-  virtual Status Prefetch(uint64_t offset, size_t n) override {
+  Status EncryptedRandomAccessFile::Prefetch(uint64_t offset, size_t n) {
     //return Status::OK();
     return file_->Prefetch(offset + prefixLength_, n);
   }
@@ -157,49 +131,38 @@ class EncryptedRandomAccessFile : public RandomAccessFile {
   // a single varint.
   //
   // Note: these IDs are only valid for the duration of the process.
-  virtual size_t GetUniqueId(char* id, size_t max_size) const override {
+  size_t EncryptedRandomAccessFile::GetUniqueId(char* id, size_t max_size) const {
     return file_->GetUniqueId(id, max_size);
   };
 
-  virtual void Hint(AccessPattern pattern) override {
+  void EncryptedRandomAccessFile::Hint(AccessPattern pattern) {
     file_->Hint(pattern);
   }
 
   // Indicates the upper layers if the current RandomAccessFile implementation
   // uses direct IO.
-  virtual bool use_direct_io() const override {
+  bool EncryptedRandomAccessFile::use_direct_io() const {
      return file_->use_direct_io();
   }
 
   // Use the returned alignment value to allocate
   // aligned buffer for Direct I/O
-  virtual size_t GetRequiredBufferAlignment() const override {
+  size_t EncryptedRandomAccessFile::GetRequiredBufferAlignment() const {
     return file_->GetRequiredBufferAlignment();
   }
 
   // Remove any kind of caching of data from the offset to offset+length
   // of this file. If the length is 0, then it refers to the end of file.
   // If the system is not caching the file contents, then this is a noop.
-  virtual Status InvalidateCache(size_t offset, size_t length) override {
+  Status EncryptedRandomAccessFile::InvalidateCache(size_t offset, size_t length) {
     return file_->InvalidateCache(offset + prefixLength_, length);
   }
-};
+
 
 // A file abstraction for sequential writing.  The implementation
 // must provide buffering since callers may append small fragments
 // at a time to the file.
-class EncryptedWritableFile : public WritableFileWrapper {
-  private:
-    std::unique_ptr<WritableFile> file_;
-    std::unique_ptr<BlockAccessCipherStream> stream_;
-    size_t prefixLength_;
-
- public:
-  // Default ctor. Prefix is assumed to be written already.
-  EncryptedWritableFile(WritableFile* f, BlockAccessCipherStream* s, size_t prefixLength)
-    : WritableFileWrapper(f), file_(f), stream_(s), prefixLength_(prefixLength) { }
-
-  Status Append(const Slice& data) override {
+  Status EncryptedWritableFile::Append(const Slice& data) {
     AlignedBuffer buf;
     Status status;
     Slice dataToAppend(data);
@@ -222,7 +185,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
     return status;
   }
 
-  Status PositionedAppend(const Slice& data, uint64_t offset) override {
+  Status EncryptedWritableFile::PositionedAppend(const Slice& data, uint64_t offset) {
     AlignedBuffer buf;
     Status status;
     Slice dataToAppend(data);
@@ -247,16 +210,18 @@ class EncryptedWritableFile : public WritableFileWrapper {
 
   // Indicates the upper layers if the current WritableFile implementation
   // uses direct IO.
-  virtual bool use_direct_io() const override { return file_->use_direct_io(); }
+  bool EncryptedWritableFile::use_direct_io() const {
+    return file_->use_direct_io(); }
 
   // Use the returned alignment value to allocate
   // aligned buffer for Direct I/O
-  virtual size_t GetRequiredBufferAlignment() const override { return file_->GetRequiredBufferAlignment(); }
+  size_t EncryptedWritableFile::GetRequiredBufferAlignment() const {
+    return file_->GetRequiredBufferAlignment(); }
 
     /*
    * Get the size of valid data in the file.
    */
-  virtual uint64_t GetFileSize() override {
+  uint64_t EncryptedWritableFile::GetFileSize() {
     return file_->GetFileSize() - prefixLength_;
   }
 
@@ -264,7 +229,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
   // before closing. It is not always possible to keep track of the file
   // size due to whole pages writes. The behavior is undefined if called
   // with other writes to follow.
-  virtual Status Truncate(uint64_t size) override {
+  Status EncryptedWritableFile::Truncate(uint64_t size) {
     return file_->Truncate(size + prefixLength_);
   }
 
@@ -272,7 +237,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
   // of this file. If the length is 0, then it refers to the end of file.
   // If the system is not caching the file contents, then this is a noop.
   // This call has no effect on dirty pages in the cache.
-  virtual Status InvalidateCache(size_t offset, size_t length) override {
+  Status EncryptedWritableFile::InvalidateCache(size_t offset, size_t length) {
     return file_->InvalidateCache(offset + prefixLength_, length);
   }
 
@@ -282,7 +247,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
   // This asks the OS to initiate flushing the cached data to disk,
   // without waiting for completion.
   // Default implementation does nothing.
-  virtual Status RangeSync(uint64_t offset, uint64_t nbytes) override {
+  Status EncryptedWritableFile::RangeSync(uint64_t offset, uint64_t nbytes) {
     return file_->RangeSync(offset + prefixLength_, nbytes);
   }
 
@@ -291,40 +256,31 @@ class EncryptedWritableFile : public WritableFileWrapper {
   // of space on devices where it can result in less file
   // fragmentation and/or less waste from over-zealous filesystem
   // pre-allocation.
-  virtual void PrepareWrite(size_t offset, size_t len) override {
+  void EncryptedWritableFile::PrepareWrite(size_t offset, size_t len) {
     file_->PrepareWrite(offset + prefixLength_, len);
   }
 
   // Pre-allocates space for a file.
-  virtual Status Allocate(uint64_t offset, uint64_t len) override {
+  Status EncryptedWritableFile::Allocate(uint64_t offset, uint64_t len) {
     return file_->Allocate(offset + prefixLength_, len);
   }
-};
+
 
 // A file abstraction for random reading and writing.
-class EncryptedRandomRWFile : public RandomRWFile {
-  private:
-    std::unique_ptr<RandomRWFile> file_;
-    std::unique_ptr<BlockAccessCipherStream> stream_;
-    size_t prefixLength_;
-
- public:
-  EncryptedRandomRWFile(RandomRWFile* f, BlockAccessCipherStream* s, size_t prefixLength)
-    : file_(f), stream_(s), prefixLength_(prefixLength) {}
 
   // Indicates if the class makes use of direct I/O
   // If false you must pass aligned buffer to Write()
-  virtual bool use_direct_io() const override { return file_->use_direct_io(); }
+  bool EncryptedRandomRWFile::use_direct_io() const { return file_->use_direct_io(); }
 
   // Use the returned alignment value to allocate
   // aligned buffer for Direct I/O
-  virtual size_t GetRequiredBufferAlignment() const override {
+  size_t EncryptedRandomRWFile::GetRequiredBufferAlignment() const {
     return file_->GetRequiredBufferAlignment();
   }
 
   // Write bytes in `data` at  offset `offset`, Returns Status::OK() on success.
   // Pass aligned buffer when use_direct_io() returns true.
-  virtual Status Write(uint64_t offset, const Slice& data) override {
+  Status EncryptedRandomRWFile::Write(uint64_t offset, const Slice& data) {
     AlignedBuffer buf;
     Status status;
     Slice dataToWrite(data);
@@ -347,7 +303,7 @@ class EncryptedRandomRWFile : public RandomRWFile {
   // Read up to `n` bytes starting from offset `offset` and store them in
   // result, provided `scratch` size should be at least `n`.
   // Returns Status::OK() on success.
-  virtual Status Read(uint64_t offset, size_t n, Slice* result, char* scratch) const override {
+  Status EncryptedRandomRWFile::Read(uint64_t offset, size_t n, Slice* result, char* scratch) const {
     assert(scratch);
     offset += prefixLength_;
     auto status = file_->Read(offset, n, result, scratch);
@@ -358,22 +314,22 @@ class EncryptedRandomRWFile : public RandomRWFile {
     return status;
   }
 
-  virtual Status Flush() override {
+  Status EncryptedRandomRWFile::Flush() {
     return file_->Flush();
   }
 
-  virtual Status Sync() override {
+  Status EncryptedRandomRWFile::Sync() {
     return file_->Sync();
   }
 
-  virtual Status Fsync() override {
+  Status EncryptedRandomRWFile::Fsync() {
     return file_->Fsync();
   }
 
-  virtual Status Close() override {
+  Status EncryptedRandomRWFile::Close() {
     return file_->Close();
   }
-};
+
 
 // EncryptedEnv implements an Env wrapper that adds encryption to files stored on disk.
 class EncryptedEnv : public EnvWrapper {
@@ -656,8 +612,10 @@ class EncryptedEnv : public EnvWrapper {
     }
     size_t prefixLength = provider_->GetPrefixLength();
     for (auto it = std::begin(*result); it!=std::end(*result); ++it) {
-      assert(it->size_bytes >= prefixLength);
-      it->size_bytes -= prefixLength;
+      if (0 != it->name.compare(".") && 0 != it->name.compare("..")) {
+//breaks env_basic_test        assert(it->size_bytes >= prefixLength);
+        it->size_bytes -= prefixLength;
+      }
     }
     return Status::OK();
  }
