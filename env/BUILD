@@ -19,6 +19,7 @@ PLATFORM_HDRS = select({
 COMMON_SRCS = [
     "env.cc",
     "env_encryption.cc",
+    "env_encrypt_2.cc",
 ]
 
 PLATFORM_SRCS = select({

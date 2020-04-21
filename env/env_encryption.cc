@@ -612,10 +612,11 @@ class EncryptedEnv : public EnvWrapper {
     }
     size_t prefixLength = provider_->GetPrefixLength();
     for (auto it = std::begin(*result); it!=std::end(*result); ++it) {
-      if (0 != it->name.compare(".") && 0 != it->name.compare("..")) {
-//breaks env_basic_test        assert(it->size_bytes >= prefixLength);
-        it->size_bytes -= prefixLength;
-      }
+      // assert(it->size_bytes >= prefixLength);
+      //  breaks env_basic_test when called on directory containing directories
+      // which makes subtraction of prefixLength worrisome since FileAttributes does not identify directories
+      it->size_bytes -= prefixLength;
+
     }
     return Status::OK();
  }
@@ -870,8 +871,6 @@ Status CTREncryptionProvider::CreateCipherStreamFromPrefix(
       new CTRCipherStream(cipher_, iv.data(), initialCounter));
   return Status::OK();
 }
-
-#include "env_encrypt_2.h"
 
 #endif // ROCKSDB_LITE
 

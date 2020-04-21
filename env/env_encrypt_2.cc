@@ -15,7 +15,7 @@
 #include "openssl/rand.h"
 #include "openssl/aes.h"
 
-#include "rocksdb/env_encryption.h"
+#include "rocksdb/env_encrypt_2.h"
 #include "util/aligned_buffer.h"
 #include "util/coding.h"
 #include "util/random.h"
@@ -26,116 +26,11 @@ namespace rocksdb {
 
 #ifndef ROCKSDB_LITE
 
-typedef uint8_t Sha1Description_t[20];
-typedef char EncryptMarker_t[8];
-static EncryptMarker_t Marker = "Encrypt";
-
-// long term:  code_version could be used in a switch statement or factory parameter
-// version 0 is 12 byte sha1 description hash, 128 bit (16 byte) nounce (assumed to be packed/byte aligned)
-typedef struct {
-  Sha1Description_t key_description_;
-  uint8_t nonce_[AES_BLOCK_SIZE/2];      // block size is 16
-} Prefix0_t;
-
-
-class AESBlockAccessCipherStream : public BlockAccessCipherStream {
-    public:
-  AESBlockAccessCipherStream(const AES_KEY & key, uint8_t code_version, uint8_t nonce[])
-    : key_(key), code_version_(code_version) {
-    memcpy(&nonce_, nonce, sizeof(AES_BLOCK_SIZE/2));
-  }
-
-  // BlockSize returns the size of each block supported by this cipher stream.
-  virtual size_t BlockSize() {return AES_BLOCK_SIZE;};
-
-  // Encrypt one or more (partial) blocks of data at the file offset.
-  // Length of data is given in dataSize.
-  virtual Status Encrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
-
-  // Decrypt one or more (partial) blocks of data at the file offset.
-  // Length of data is given in dataSize.
-  virtual Status Decrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
-
-protected:
-  // Allocate scratch space which is passed to EncryptBlock/DecryptBlock.
-  virtual void AllocateScratch(std::string&) {};
-
-  // Encrypt a block of data at the given block index.
-  // Length of data is equal to BlockSize();
-  virtual Status EncryptBlock(uint64_t /*blockIndex*/, char */*data*/, char* /*scratch*/) {return Status::OK();}
-
-  // Decrypt a block of data at the given block index.
-  // Length of data is equal to BlockSize();
-  virtual Status DecryptBlock(uint64_t /*blockIndex*/, char */*data*/, char* /*scratch*/) {return Status::OK();}
-
-  const AES_KEY & key_;  // should we have a copy of this?
-      uint8_t code_version_;
-      uint8_t nonce_[AES_BLOCK_SIZE/2];
-
-};
-
-
-
-class CTREncryptionProvider2 : public CTREncryptionProvider {
-public:
-
-  virtual size_t GetPrefixLength() override {return sizeof(Prefix0_t) + sizeof(EncryptMarker_t);}
-
-  virtual Status CreateNewPrefix(const std::string& /*fname*/, char *prefix, size_t prefixLength) override
-  {
-    Status s;
-    if (sizeof(Prefix0_t)<=prefixLength) {
-      int ret_val;
-
-      Prefix0_t * pf={(Prefix0_t *)prefix};
-      memcpy((void *)pf->key_description_,(void *)key_desc_, sizeof(Sha1Description_t));
-      ret_val = RAND_bytes((unsigned char *)&pf->nonce_, AES_BLOCK_SIZE/2);  //RAND_poll() to initialize
-      if (1 != ret_val) {
-        s = Status::NotSupported("RAND_bytes failed");
-      }
-    } else {
-      s = Status::NotSupported("Prefix size needs to be 28 or more");
-    }
-
-    return s;
-  }
-
-  virtual Status CreateCipherStream(
-    const std::string& /*fname*/, const EnvOptions& /*options*/, Slice& /*prefix*/,
-    std::unique_ptr<BlockAccessCipherStream>* /*result*/) override
-  {return Status::NotSupported("Wrong EncryptionProvider assumed");}
-
-  virtual BlockAccessCipherStream * CreateCipherStream2(
-    uint8_t code_version, uint8_t nonce[]) {
-    return new AESBlockAccessCipherStream(key_, code_version, nonce);
-  }
-
-  const AES_KEY & key() const {return key_;};
-
-protected:
-  Sha1Description_t key_desc_;
-  AES_KEY key_;
-
-};
-
-
-// EncryptedEnv2 implements an Env wrapper that adds encryption to files stored on disk.
-
-class EncryptedEnv2 : public EnvWrapper {
- public:
-  EncryptedEnv2(Env* base_env,
-                std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
-                std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write)
-    : EnvWrapper(base_env), encrypt_read_(encrypt_read), encrypt_write_(encrypt_write) {
-    RAND_poll();
-  }
-
-  bool IsWriteEncrypted() const {return nullptr!=encrypt_write_.second;}
 
   // NewSequentialFile opens a file for sequential reading.
-  virtual Status NewSequentialFile(const std::string& fname,
+  Status EncryptedEnv2::NewSequentialFile(const std::string& fname,
                                    std::unique_ptr<SequentialFile>* result,
-                                   const EnvOptions& options) override {
+                                   const EnvOptions& options) {
     result->reset();
     if (options.use_mmap_reads) {
       return Status::InvalidArgument();
@@ -169,9 +64,9 @@ class EncryptedEnv2 : public EnvWrapper {
   }
 
   // NewRandomAccessFile opens a file for random read access.
-  virtual Status NewRandomAccessFile(const std::string& fname,
+  Status EncryptedEnv2::NewRandomAccessFile(const std::string& fname,
                                      std::unique_ptr<RandomAccessFile>* result,
-                                     const EnvOptions& options) override {
+                                     const EnvOptions& options) {
     result->reset();
     if (options.use_mmap_reads) {
       return Status::InvalidArgument();
@@ -202,9 +97,9 @@ class EncryptedEnv2 : public EnvWrapper {
   }
 
   // NewWritableFile opens a file for sequential writing.
-  virtual Status NewWritableFile(const std::string& fname,
+  Status EncryptedEnv2::NewWritableFile(const std::string& fname,
                                  std::unique_ptr<WritableFile>* result,
-                                 const EnvOptions& options) override {
+                                 const EnvOptions& options) {
     Status status;
     result->reset();
 
@@ -242,9 +137,9 @@ class EncryptedEnv2 : public EnvWrapper {
   // returns non-OK.
   //
   // The returned file will only be accessed by one thread at a time.
-  virtual Status ReopenWritableFile(const std::string& fname,
+  Status EncryptedEnv2::ReopenWritableFile(const std::string& fname,
                                     std::unique_ptr<WritableFile>* result,
-                                    const EnvOptions& options) override {
+                                    const EnvOptions& options) {
     Status status;
     result->reset();
 
@@ -277,10 +172,10 @@ class EncryptedEnv2 : public EnvWrapper {
 
 
   // Reuse an existing file by renaming it and opening it as writable.
-  virtual Status ReuseWritableFile(const std::string& fname,
+  Status EncryptedEnv2::ReuseWritableFile(const std::string& fname,
                                    const std::string& old_fname,
                                    std::unique_ptr<WritableFile>* result,
-                                   const EnvOptions& options) override {
+                                   const EnvOptions& options) {
     Status status;
     result->reset();
 
@@ -317,9 +212,9 @@ class EncryptedEnv2 : public EnvWrapper {
   // *result and returns OK.  On failure returns non-OK.
   //
   // The returned file will only be accessed by one thread at a time.
-  virtual Status NewRandomRWFile(const std::string& fname,
+  Status EncryptedEnv2::NewRandomRWFile(const std::string& fname,
                                  std::unique_ptr<RandomRWFile>* result,
-                                 const EnvOptions& options) override {
+                                 const EnvOptions& options) {
     Status status;
     result->reset();
 
@@ -375,7 +270,7 @@ class EncryptedEnv2 : public EnvWrapper {
   //         NotFound if "dir" does not exist, the calling process does not have
   //                  permission to access "dir", or if "dir" is invalid.
   //         IOError if an IO Error was encountered
-  virtual Status GetChildrenFileAttributes(const std::string& dir, std::vector<FileAttributes>* result) override {
+  Status EncryptedEnv2::GetChildrenFileAttributes(const std::string& dir, std::vector<FileAttributes>* result) {
     auto status = EnvWrapper::GetChildrenFileAttributes(dir, result);
 #if 0
 // do we really need to adjust all of these file sizes if encrypted?
@@ -392,7 +287,7 @@ class EncryptedEnv2 : public EnvWrapper {
  }
 
   // Store the size of fname in *file_size.
-  virtual Status GetFileSize(const std::string& fname, uint64_t* file_size) override {
+  Status EncryptedEnv2::GetFileSize(const std::string& fname, uint64_t* file_size) {
     Status status;
     status = EnvWrapper::GetFileSize(fname, file_size);
 #if 0
@@ -410,196 +305,6 @@ class EncryptedEnv2 : public EnvWrapper {
     return status;
   }
 
-#if 0
-// only needed for GetChildrenFileAttributes & GetFileSize
-  virtual Status GetEncryptionProvider(const std::string& fname, std::shared_ptr<EncryptionProvider> & provider) {
-    std::unique_ptr<SequentialFile> underlying;
-    EnvOptions options;
-    Status status;
-    EncryptMarker_t marker;
-    Slice marker_slice;
-
-    provider.reset();
-    status = EnvWrapper::NewSequentialFile(fname, &underlying, options);
-    if (status.ok()) {
-      // Look for encryption marker
-      status = underlying->Read(sizeof(marker), &marker_slice, marker);
-    }
-
-    if (status.ok()) {
-      if (marker_slice.starts_with(Marker)) {
-        uint8_t code_version = (uint8_t)marker_slice[7];
-        std::unique_ptr<BlockAccessCipherStream> stream;
-
-        status=ReadSeqEncryptionPrefix(&underlying, provider, stream);
-      } else {
-        // normal file, not encrypted
-      }
-    }
-
-    return status;
-  }
-#endif
-
-
-  template <class TypeFile> Status ReadSeqEncryptionPrefix(TypeFile * f,
-                                      std::shared_ptr<EncryptionProvider> & provider,
-                                      std::unique_ptr<BlockAccessCipherStream> & stream) {
-    Status status;
-
-    provider.reset(); // nullptr for provider implies "no encryption"
-    stream.release();
-
-    // Look for encryption marker
-    EncryptMarker_t marker;
-    Slice marker_slice;
-    status = f->Read(sizeof(marker)+1, &marker_slice, marker);
-    if (status.ok()) {
-      if (sizeof(marker)<marker_slice.size() && marker_slice.starts_with(Marker)) {
-
-        // code_version currently unused
-        uint8_t code_version = (uint8_t)marker_slice[7];
-
-        Slice prefix_slice;
-        Prefix0_t prefix_buffer;
-        status = f->Read(sizeof(Prefix0_t), &prefix_slice, (char *)&prefix_buffer);
-        if (status.ok() && sizeof(Prefix0_t) == prefix_slice.size()) {
-
-          auto it = encrypt_read_.find(prefix_buffer.key_description_);
-          if (encrypt_read_.end() != it) {
-            CTREncryptionProvider2 * ptr=(CTREncryptionProvider2 *)it->second.get();
-            provider=it->second;
-            stream.reset(new AESBlockAccessCipherStream(ptr->key(), code_version, prefix_buffer.nonce_));;
-          } else {
-            status = Status::NotSupported("No encryption key found to match input file");
-          }
-        }
-      }
-    }
-    return status;
-  }
-
-  template <class TypeFile> Status ReadRandEncryptionPrefix(TypeFile * f,
-                                      std::shared_ptr<EncryptionProvider> & provider,
-                                      std::unique_ptr<BlockAccessCipherStream> & stream) {
-    Status status;
-
-    provider.reset(); // nullptr for provider implies "no encryption"
-    stream.release();
-
-    // Look for encryption marker
-    EncryptMarker_t marker;
-    Slice marker_slice;
-    status = f->Read(0, sizeof(marker)+1, &marker_slice, marker);
-    if (status.ok()) {
-      if (sizeof(marker)<marker_slice.size() && marker_slice.starts_with(Marker)) {
-
-        // code_version currently unused
-        uint8_t code_version = (uint8_t)marker_slice[7];
-
-        Slice prefix_slice;
-        Prefix0_t prefix_buffer;
-        status = f->Read(sizeof(marker)+1, sizeof(Prefix0_t), &prefix_slice, (char *)&prefix_buffer);
-        if (status.ok() && sizeof(Prefix0_t) == prefix_slice.size()) {
-
-          auto it = encrypt_read_.find(prefix_buffer.key_description_);
-          if (encrypt_read_.end() != it) {
-            CTREncryptionProvider2 * ptr=(CTREncryptionProvider2 *)it->second.get();
-            provider=it->second;
-            stream.reset(new AESBlockAccessCipherStream(ptr->key(), code_version, prefix_buffer.nonce_));
-          } else {
-            status = Status::NotSupported("No encryption key found to match input file");
-          }
-        }
-      }
-    }
-    return status;
-  }
-
-
-  template <class TypeFile> Status WriteSeqEncryptionPrefix(TypeFile * f,
-                                      std::unique_ptr<BlockAccessCipherStream> & stream) {
-    Status status;
-
-    // set up Encryption maker, code version '0'
-    uint8_t code_version={'0'};
-    Prefix0_t prefix;
-    EncryptMarker_t marker;
-    strncpy(marker, Marker, sizeof(Marker));
-    marker[sizeof(EncryptMarker_t)-1]=code_version;
-
-    Slice marker_slice(marker, sizeof(EncryptMarker_t));
-    status = f->Append(marker_slice);
-
-    if (status.ok()) {
-      // create nonce, then write it and key description
-      Slice prefix_slice((char *)&prefix, sizeof(prefix));
-
-      status = encrypt_write_.second->CreateNewPrefix(std::string(), (char *)&prefix, encrypt_write_.second->GetPrefixLength());
-
-      if (status.ok()) {
-        status = f->Append(prefix_slice);
-      }
-    }
-
-    if (status.ok()) {
-      CTREncryptionProvider2 * ptr=(CTREncryptionProvider2 *)encrypt_write_.second.get();
-      stream.reset(new AESBlockAccessCipherStream(ptr->key(), code_version, prefix.nonce_));
-    }
-
-    return status;
-  }
-
-
-  template <class TypeFile> Status WriteRandEncryptionPrefix(TypeFile * f,
-                                      std::unique_ptr<BlockAccessCipherStream> & stream) {
-    Status status;
-
-    // set up Encryption maker, code version '0'
-    uint8_t code_version={'0'};
-    Prefix0_t prefix;
-    EncryptMarker_t marker;
-    strncpy(marker, Marker, sizeof(Marker));
-    marker[sizeof(EncryptMarker_t)-1]=code_version;
-
-    Slice marker_slice(marker, sizeof(EncryptMarker_t));
-    status = f->Write(0, marker_slice);
-
-    if (status.ok()) {
-      // create nonce, then write it and key description
-      Slice prefix_slice((char *)&prefix, sizeof(prefix));
-
-      status = encrypt_write_.second->CreateNewPrefix(std::string(), (char *)&prefix, encrypt_write_.second->GetPrefixLength());
-
-      if (status.ok()) {
-        status = f->Write(sizeof(EncryptMarker_t), prefix_slice);
-      }
-    }
-
-    if (status.ok()) {
-      CTREncryptionProvider2 * ptr=(CTREncryptionProvider2 *)encrypt_write_.second.get();
-      stream.reset(new AESBlockAccessCipherStream(ptr->key(), code_version, prefix.nonce_));
-    }
-
-    return status;
-  }
-
-
-protected:
-
-  std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read_;
-  std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write_;
-};
-
-
-
-// Returns an Env that encrypts data when stored on disk and decrypts data when
-// read from disk.
-Env* NewEncryptedEnv2(Env* base_env,
-                      std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
-                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write) {
-  return new EncryptedEnv2(base_env, encrypt_read, encrypt_write);
-}
 
 #if 0
 // Encrypt one or more (partial) blocks of data at the file offset.
