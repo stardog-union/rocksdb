@@ -106,6 +106,7 @@ struct AesCtrKey_t {
   }
 
 };
+
 typedef char EncryptMarker_t[8];
 static EncryptMarker_t Marker = "Encrypt";
 
@@ -276,36 +277,8 @@ class EncryptedEnv2 : public EnvWrapper {
   // Store the size of fname in *file_size.
   virtual Status GetFileSize(const std::string& fname, uint64_t* file_size) override;
 
-#if 0
-// only needed for GetChildrenFileAttributes & GetFileSize
-  virtual Status GetEncryptionProvider(const std::string& fname, std::shared_ptr<EncryptionProvider> & provider) {
-    std::unique_ptr<SequentialFile> underlying;
-    EnvOptions options;
-    Status status;
-    EncryptMarker_t marker;
-    Slice marker_slice;
-
-    provider.reset();
-    status = EnvWrapper::NewSequentialFile(fname, &underlying, options);
-    if (status.ok()) {
-      // Look for encryption marker
-      status = underlying->Read(sizeof(marker), &marker_slice, marker);
-    }
-
-    if (status.ok()) {
-      if (marker_slice.starts_with(Marker)) {
-        uint8_t code_version = (uint8_t)marker_slice[7];
-        std::unique_ptr<BlockAccessCipherStream> stream;
-
-        status=ReadSeqEncryptionPrefix(&underlying, provider, stream);
-      } else {
-        // normal file, not encrypted
-      }
-    }
-
-    return status;
-  }
-#endif
+  // only needed for GetChildrenFileAttributes & GetFileSize
+  virtual Status GetEncryptionProvider(const std::string& fname, std::shared_ptr<EncryptionProvider> & provider);
 
 
   template <class TypeFile> Status ReadSeqEncryptionPrefix(TypeFile * f,

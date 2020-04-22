@@ -304,21 +304,36 @@ Env* NewEncryptedEnv2(Env* base_env,
   Status EncryptedEnv2::GetFileSize(const std::string& fname, uint64_t* file_size) {
     Status status;
     status = EnvWrapper::GetFileSize(fname, file_size);
-#if 0
-// do we really need to adjust all of these file sizes if encrypted?
+
     if (status.ok()) {
+      // this is slightly expensive, but fortunately not used heavily
       std::shared_ptr<EncryptionProvider> provider;
       status = GetEncryptionProvider(fname, provider);
       if (status.ok() && provider) {
         size_t prefixLength = provider->GetPrefixLength();
-        assert(*file_size >= prefixLength);
-        *file_size -= prefixLength;
+        if (prefixLength <= *file_size)
+          *file_size -= prefixLength;
       }
     }
-#endif
+
     return status;
   }
 
+  Status EncryptedEnv2::GetEncryptionProvider(const std::string& fname, std::shared_ptr<EncryptionProvider> & provider) {
+    std::unique_ptr<SequentialFile> underlying;
+    EnvOptions options;
+    Status status;
+
+    provider.reset();
+    status = Env::Default()->NewSequentialFile(fname, &underlying, options);
+
+    if (status.ok()) {
+      std::unique_ptr<BlockAccessCipherStream> stream;
+      status = EncryptedEnv2::ReadSeqEncryptionPrefix(underlying.get(), provider, stream);
+    }
+
+    return status;
+  }
 
 #if 0
 // Encrypt one or more (partial) blocks of data at the file offset.
