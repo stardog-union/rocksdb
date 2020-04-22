@@ -286,17 +286,22 @@ Env* NewEncryptedEnv2(Env* base_env,
   //         IOError if an IO Error was encountered
   Status EncryptedEnv2::GetChildrenFileAttributes(const std::string& dir, std::vector<FileAttributes>* result) {
     auto status = EnvWrapper::GetChildrenFileAttributes(dir, result);
-#if 0
-// do we really need to adjust all of these file sizes if encrypted?
-    if (!status.ok()) {
-      return status;
+    if (status.ok()) {
+      // this is slightly expensive, but fortunately not used heavily
+      std::shared_ptr<EncryptionProvider> provider;
+
+      for (auto it = std::begin(*result); it!=std::end(*result); ++it) {
+        status = GetEncryptionProvider(it->name, provider);
+
+        if (status.ok() && provider) {
+          size_t prefixLength = provider->GetPrefixLength();
+
+          if (prefixLength <= it->size_bytes)
+            it->size_bytes -= prefixLength;
+        }
+      }
     }
-    size_t prefixLength = provider_->GetPrefixLength();
-    for (auto it = std::begin(*result); it!=std::end(*result); ++it) {
-      assert(it->size_bytes >= prefixLength);
-      it->size_bytes -= prefixLength;
-    }
-#endif
+
     return status;
  }
 
