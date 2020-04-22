@@ -12,8 +12,9 @@
 #include <cctype>
 #include <iostream>
 
-#include "openssl/rand.h"
 #include "openssl/aes.h"
+#include "openssl/evp.h"
+#include "openssl/rand.h"
 
 #include "rocksdb/env_encryption.h"
 #include "util/aligned_buffer.h"
@@ -26,21 +27,99 @@ namespace rocksdb {
 
 #ifndef ROCKSDB_LITE
 
-typedef uint8_t Sha1Description_t[20];
+struct Sha1Description_t {
+  uint8_t desc[EVP_MAX_MD_SIZE];
+  bool valid;
+
+  Sha1Description_t() : valid(false) {
+    memset(desc, 0, EVP_MAX_MD_SIZE);
+  }
+
+  Sha1Description_t(uint8_t * Desc, size_t DescLen) : valid(false) {
+    memset(desc, 0, EVP_MAX_MD_SIZE);
+    if (DescLen<=EVP_MAX_MD_SIZE) {
+      memcpy(desc, Desc, DescLen);
+      valid = true;
+    }
+  }
+
+  Sha1Description_t(const std::string KeyDescStr) {
+    bool good={true};
+    int ret_val;
+    unsigned len;
+
+    memset(desc, 0, EVP_MAX_MD_SIZE);
+    if (0 != KeyDescStr.length()) {
+      std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX *)> context(EVP_MD_CTX_new(), EVP_MD_CTX_free);
+
+      ret_val = EVP_DigestInit_ex(context.get(), EVP_sha1(), nullptr);
+      good = (1 == ret_val);
+      if (good) {
+        ret_val = EVP_DigestUpdate(context.get(), KeyDescStr.c_str(), KeyDescStr.length());
+        good = (1 == ret_val);
+      }
+
+      if (good) {
+        ret_val = EVP_DigestFinal_ex(context.get(), desc, &len);
+        good = (1 == ret_val);
+      }
+    } else {
+      good = false;
+    }
+
+    valid = good;
+  }
+
+  // goal is to explicitly remove desc from memory once no longer needed
+  ~Sha1Description_t() {
+    memset(desc, 0, EVP_MAX_MD_SIZE);
+    valid = false;
+  }
+
+  bool operator<(const Sha1Description_t &rhs) const {
+    return memcmp(desc, rhs.desc, EVP_MAX_MD_SIZE)<0;
+  }
+};
+
+struct AesCtrKey_t {
+  uint8_t key[EVP_MAX_KEY_LENGTH];
+  bool valid;
+
+  AesCtrKey_t() : valid(false) {
+    memset(key, 0, EVP_MAX_KEY_LENGTH);
+  }
+
+  AesCtrKey_t(const uint8_t * Key, size_t KeyLen) {
+    memset(key, 0, EVP_MAX_KEY_LENGTH);
+    if (KeyLen <= EVP_MAX_KEY_LENGTH) {
+      memcpy(key, Key, KeyLen);
+      valid = true;
+    } else {
+      valid = false;
+    }
+  }
+
+  // goal is to explicitly remove key from memory once no longer needed
+  ~AesCtrKey_t() {
+    memset(key, 0, EVP_MAX_KEY_LENGTH);
+    valid = false;
+  }
+
+};
 typedef char EncryptMarker_t[8];
 static EncryptMarker_t Marker = "Encrypt";
 
 // long term:  code_version could be used in a switch statement or factory parameter
 // version 0 is 12 byte sha1 description hash, 128 bit (16 byte) nounce (assumed to be packed/byte aligned)
 typedef struct {
-  Sha1Description_t key_description_;
+  uint8_t key_description_[EVP_MAX_MD_SIZE];
   uint8_t nonce_[AES_BLOCK_SIZE/2];      // block size is 16
 } Prefix0_t;
 
 
 class AESBlockAccessCipherStream : public BlockAccessCipherStream {
-    public:
-  AESBlockAccessCipherStream(const AES_KEY & key, uint8_t code_version, uint8_t nonce[])
+public:
+  AESBlockAccessCipherStream(const AesCtrKey_t & key, uint8_t code_version, uint8_t nonce[])
     : key_(key), code_version_(code_version) {
     memcpy(&nonce_, nonce, sizeof(AES_BLOCK_SIZE/2));
   }
@@ -68,16 +147,22 @@ protected:
   // Length of data is equal to BlockSize();
   virtual Status DecryptBlock(uint64_t /*blockIndex*/, char */*data*/, char* /*scratch*/) {return Status::OK();}
 
-  const AES_KEY & key_;  // should we have a copy of this?
-      uint8_t code_version_;
-      uint8_t nonce_[AES_BLOCK_SIZE/2];
+  AesCtrKey_t key_;
+  uint8_t code_version_;
+  uint8_t nonce_[AES_BLOCK_SIZE/2];
 
 };
 
 
 
-class CTREncryptionProvider2 : public CTREncryptionProvider {
+class CTREncryptionProvider2 : public EncryptionProvider {
 public:
+  CTREncryptionProvider2() = delete;
+
+  CTREncryptionProvider2(const Sha1Description_t & key_desc, const AesCtrKey_t & key)
+    : valid_(true), key_desc_(key_desc), key_(key) {}
+
+  CTREncryptionProvider2(const std::string & key_desc_str, const unsigned char unformatted_key[], int bytes);
 
   virtual size_t GetPrefixLength() override {return sizeof(Prefix0_t) + sizeof(EncryptMarker_t);}
 
@@ -88,7 +173,7 @@ public:
       int ret_val;
 
       Prefix0_t * pf={(Prefix0_t *)prefix};
-      memcpy((void *)pf->key_description_,(void *)key_desc_, sizeof(Sha1Description_t));
+      memcpy(pf->key_description_,key_desc_.desc, sizeof(key_desc_.desc));
       ret_val = RAND_bytes((unsigned char *)&pf->nonce_, AES_BLOCK_SIZE/2);  //RAND_poll() to initialize
       if (1 != ret_val) {
         s = Status::NotSupported("RAND_bytes failed");
@@ -110,11 +195,14 @@ public:
     return new AESBlockAccessCipherStream(key_, code_version, nonce);
   }
 
-  const AES_KEY & key() const {return key_;};
+  bool Valid() const {return valid_;};
+  const Sha1Description_t & key_desc() const {return key_desc_;};
+  const AesCtrKey_t & key() const {return key_;};
 
 protected:
+  bool valid_;
   Sha1Description_t key_desc_;
-  AES_KEY key_;
+  AesCtrKey_t key_;
 
 };
 
@@ -231,9 +319,9 @@ class EncryptedEnv2 : public EnvWrapper {
     // Look for encryption marker
     EncryptMarker_t marker;
     Slice marker_slice;
-    status = f->Read(sizeof(marker)+1, &marker_slice, marker);
+    status = f->Read(sizeof(marker), &marker_slice, marker);
     if (status.ok()) {
-      if (sizeof(marker)<marker_slice.size() && marker_slice.starts_with(Marker)) {
+      if (sizeof(marker) == marker_slice.size() && marker_slice.starts_with(Marker)) {
 
         // code_version currently unused
         uint8_t code_version = (uint8_t)marker_slice[7];
@@ -242,8 +330,9 @@ class EncryptedEnv2 : public EnvWrapper {
         Prefix0_t prefix_buffer;
         status = f->Read(sizeof(Prefix0_t), &prefix_slice, (char *)&prefix_buffer);
         if (status.ok() && sizeof(Prefix0_t) == prefix_slice.size()) {
+          Sha1Description_t desc(prefix_buffer.key_description_, sizeof(prefix_buffer.key_description_));
 
-          auto it = encrypt_read_.find(prefix_buffer.key_description_);
+          auto it = encrypt_read_.find(desc);
           if (encrypt_read_.end() != it) {
             CTREncryptionProvider2 * ptr=(CTREncryptionProvider2 *)it->second.get();
             provider=it->second;
@@ -268,19 +357,20 @@ class EncryptedEnv2 : public EnvWrapper {
     // Look for encryption marker
     EncryptMarker_t marker;
     Slice marker_slice;
-    status = f->Read(0, sizeof(marker)+1, &marker_slice, marker);
+    status = f->Read(0, sizeof(marker), &marker_slice, marker);
     if (status.ok()) {
-      if (sizeof(marker)<marker_slice.size() && marker_slice.starts_with(Marker)) {
+      if (sizeof(marker) == marker_slice.size() && marker_slice.starts_with(Marker)) {
 
         // code_version currently unused
         uint8_t code_version = (uint8_t)marker_slice[7];
 
         Slice prefix_slice;
         Prefix0_t prefix_buffer;
-        status = f->Read(sizeof(marker)+1, sizeof(Prefix0_t), &prefix_slice, (char *)&prefix_buffer);
+        status = f->Read(sizeof(marker), sizeof(Prefix0_t), &prefix_slice, (char *)&prefix_buffer);
         if (status.ok() && sizeof(Prefix0_t) == prefix_slice.size()) {
+          Sha1Description_t desc(prefix_buffer.key_description_, sizeof(prefix_buffer.key_description_));
 
-          auto it = encrypt_read_.find(prefix_buffer.key_description_);
+          auto it = encrypt_read_.find(desc);
           if (encrypt_read_.end() != it) {
             CTREncryptionProvider2 * ptr=(CTREncryptionProvider2 *)it->second.get();
             provider=it->second;
@@ -375,9 +465,7 @@ protected:
 // read from disk.
 Env* NewEncryptedEnv2(Env* base_env,
                       std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
-                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write) {
-  return new EncryptedEnv2(base_env, encrypt_read, encrypt_write);
-}
+                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
 
 #if 0
 // Encrypt one or more (partial) blocks of data at the file offset.

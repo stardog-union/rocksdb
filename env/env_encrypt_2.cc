@@ -27,6 +27,20 @@ namespace rocksdb {
 #ifndef ROCKSDB_LITE
 
 
+CTREncryptionProvider2::CTREncryptionProvider2(const std::string & key_desc_str,
+                                               const uint8_t Unformatted_key[], int Bytes)
+  : valid_(false), key_desc_(key_desc_str), key_(Unformatted_key, Bytes) {}
+
+
+// Returns an Env that encrypts data when stored on disk and decrypts data when
+// read from disk.
+Env* NewEncryptedEnv2(Env* base_env,
+                      std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
+                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write) {
+  return new EncryptedEnv2(base_env, encrypt_read, encrypt_write);
+}
+
+
   // NewSequentialFile opens a file for sequential reading.
   Status EncryptedEnv2::NewSequentialFile(const std::string& fname,
                                    std::unique_ptr<SequentialFile>* result,

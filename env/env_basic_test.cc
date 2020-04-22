@@ -10,6 +10,7 @@
 #include "env/mock_env.h"
 #include "rocksdb/env.h"
 #include "rocksdb/env_encryption.h"
+#include "rocksdb/env_encrypt_2.h"
 #include "rocksdb/utilities/object_registry.h"
 #include "util/testharness.h"
 
@@ -92,7 +93,7 @@ static std::unique_ptr<Env> mock_env(new MockEnv(Env::Default()));
 INSTANTIATE_TEST_CASE_P(MockEnv, EnvBasicTestWithParam,
                         ::testing::Values(mock_env.get()));
 
-// next four statements run env on test default encryption code.
+// next statements run env test against default encryption code.
 static ROT13BlockCipher encrypt_block_rot13(32);
 
 static CTREncryptionProvider encrypt_provider_ctr(encrypt_block_rot13);
@@ -104,12 +105,35 @@ INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvBasicTestWithParam,
 INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvMoreTestWithParam,
                         ::testing::Values(encrypt_env.get()));
 
+// next statements run env test against encrypt_2 code.
+static std::string KeyName={"A key name"};
+static Sha1Description_t KeyDesc(KeyName);
+
+// this key is from https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf,
+//  example F.5.5
+static uint8_t key256[] = {0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
+                           0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
+                           0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7,
+                           0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4};
+std::shared_ptr<EncryptionProvider> encrypt2_provider_ctr(new CTREncryptionProvider2(KeyName, key256, 32));
+
+static std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_readers={
+  {KeyDesc, encrypt2_provider_ctr}};
+static std::pair<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_writer={
+  KeyDesc, encrypt2_provider_ctr};
+
+static std::unique_ptr<Env> encrypt2_env(new NormalizingEnvWrapper(NewEncryptedEnv2(Env::Default(),
+                                                                                    encrypt_readers, encrypt_writer)));
+
+
+INSTANTIATE_TEST_CASE_P(EncryptedEnv2, EnvBasicTestWithParam,
+                        ::testing::Values(encrypt2_env.get()));
+
 
 #ifndef ROCKSDB_LITE
 static std::unique_ptr<Env> mem_env(NewMemEnv(Env::Default()));
 INSTANTIATE_TEST_CASE_P(MemEnv, EnvBasicTestWithParam,
                         ::testing::Values(mem_env.get()));
-
 namespace {
 
 // Returns a vector of 0 or 1 Env*, depending whether an Env is registered for
