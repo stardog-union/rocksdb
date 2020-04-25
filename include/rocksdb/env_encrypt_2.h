@@ -122,7 +122,7 @@ class AESBlockAccessCipherStream : public BlockAccessCipherStream {
 public:
   AESBlockAccessCipherStream(const AesCtrKey_t & key, uint8_t code_version, uint8_t nonce[])
     : key_(key), code_version_(code_version) {
-    memcpy(&nonce_, nonce, sizeof(AES_BLOCK_SIZE/2));
+    memcpy(&nonce_, nonce, AES_BLOCK_SIZE/2);
   }
 
   // BlockSize returns the size of each block supported by this cipher stream.
@@ -130,11 +130,11 @@ public:
 
   // Encrypt one or more (partial) blocks of data at the file offset.
   // Length of data is given in dataSize.
-  virtual Status Encrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
+//  virtual Status Encrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
 
   // Decrypt one or more (partial) blocks of data at the file offset.
   // Length of data is given in dataSize.
-  virtual Status Decrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
+//  virtual Status Decrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
 
 protected:
   // Allocate scratch space which is passed to EncryptBlock/DecryptBlock.
@@ -142,11 +142,11 @@ protected:
 
   // Encrypt a block of data at the given block index.
   // Length of data is equal to BlockSize();
-  virtual Status EncryptBlock(uint64_t /*blockIndex*/, char */*data*/, char* /*scratch*/) {return Status::OK();}
+  virtual Status EncryptBlock(uint64_t blockIndex, char *data, char* scratch) override;
 
   // Decrypt a block of data at the given block index.
   // Length of data is equal to BlockSize();
-  virtual Status DecryptBlock(uint64_t /*blockIndex*/, char */*data*/, char* /*scratch*/) {return Status::OK();}
+  virtual Status DecryptBlock(uint64_t blockIndex, char *data, char* scratch) override;
 
   AesCtrKey_t key_;
   uint8_t code_version_;
@@ -163,7 +163,9 @@ public:
   CTREncryptionProvider2(const Sha1Description_t & key_desc, const AesCtrKey_t & key)
     : valid_(true), key_desc_(key_desc), key_(key) {}
 
-  CTREncryptionProvider2(const std::string & key_desc_str, const unsigned char unformatted_key[], int bytes);
+  CTREncryptionProvider2(const std::string & key_desc_str,
+                         const uint8_t unformatted_key[], int bytes)
+    : valid_(false), key_desc_(key_desc_str), key_(unformatted_key, bytes) {}
 
   virtual size_t GetPrefixLength() override {return sizeof(Prefix0_t) + sizeof(EncryptMarker_t);}
 
@@ -440,235 +442,7 @@ Env* NewEncryptedEnv2(Env* base_env,
                       std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
                       std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
 
-#if 0
-// Encrypt one or more (partial) blocks of data at the file offset.
-// Length of data is given in dataSize.
-Status BlockAccessCipherStream::Encrypt(uint64_t fileOffset, char *data, size_t dataSize) {
-  // Calculate block index
-  auto blockSize = BlockSize();
-  uint64_t blockIndex = fileOffset / blockSize;
-  size_t blockOffset = fileOffset % blockSize;
-  std::unique_ptr<char[]> blockBuffer;
 
-  std::string scratch;
-  AllocateScratch(scratch);
-
-  // Encrypt individual blocks.
-  while (1) {
-    char *block = data;
-    size_t n = std::min(dataSize, blockSize - blockOffset);
-    if (n != blockSize) {
-      // We're not encrypting a full block.
-      // Copy data to blockBuffer
-      if (!blockBuffer.get()) {
-        // Allocate buffer
-        blockBuffer = std::unique_ptr<char[]>(new char[blockSize]);
-      }
-      block = blockBuffer.get();
-      // Copy plain data to block buffer
-      memmove(block + blockOffset, data, n);
-    }
-    auto status = EncryptBlock(blockIndex, block, (char*)scratch.data());
-    if (!status.ok()) {
-      return status;
-    }
-    if (block != data) {
-      // Copy encrypted data back to `data`.
-      memmove(data, block + blockOffset, n);
-    }
-    dataSize -= n;
-    if (dataSize == 0) {
-      return Status::OK();
-    }
-    data += n;
-    blockOffset = 0;
-    blockIndex++;
-  }
-}
-
-// Decrypt one or more (partial) blocks of data at the file offset.
-// Length of data is given in dataSize.
-Status BlockAccessCipherStream::Decrypt(uint64_t fileOffset, char *data, size_t dataSize) {
-  // Calculate block index
-  auto blockSize = BlockSize();
-  uint64_t blockIndex = fileOffset / blockSize;
-  size_t blockOffset = fileOffset % blockSize;
-  std::unique_ptr<char[]> blockBuffer;
-
-  std::string scratch;
-  AllocateScratch(scratch);
-
-  // Decrypt individual blocks.
-  while (1) {
-    char *block = data;
-    size_t n = std::min(dataSize, blockSize - blockOffset);
-    if (n != blockSize) {
-      // We're not decrypting a full block.
-      // Copy data to blockBuffer
-      if (!blockBuffer.get()) {
-        // Allocate buffer
-        blockBuffer = std::unique_ptr<char[]>(new char[blockSize]);
-      }
-      block = blockBuffer.get();
-      // Copy encrypted data to block buffer
-      memmove(block + blockOffset, data, n);
-    }
-    auto status = DecryptBlock(blockIndex, block, (char*)scratch.data());
-    if (!status.ok()) {
-      return status;
-    }
-    if (block != data) {
-      // Copy decrypted data back to `data`.
-      memmove(data, block + blockOffset, n);
-    }
-    dataSize -= n;
-    if (dataSize == 0) {
-      return Status::OK();
-    }
-    data += n;
-    blockOffset = 0;
-    blockIndex++;
-  }
-}
-
-// Encrypt a block of data.
-// Length of data is equal to BlockSize().
-Status ROT13BlockCipher::Encrypt(char *data) {
-  for (size_t i = 0; i < blockSize_; ++i) {
-      data[i] += 13;
-  }
-  return Status::OK();
-}
-
-// Decrypt a block of data.
-// Length of data is equal to BlockSize().
-Status ROT13BlockCipher::Decrypt(char *data) {
-  return Encrypt(data);
-}
-
-// Allocate scratch space which is passed to EncryptBlock/DecryptBlock.
-void CTRCipherStream::AllocateScratch(std::string& scratch) {
-  auto blockSize = cipher_.BlockSize();
-  scratch.reserve(blockSize);
-}
-
-// Encrypt a block of data at the given block index.
-// Length of data is equal to BlockSize();
-Status CTRCipherStream::EncryptBlock(uint64_t blockIndex, char *data, char* scratch) {
-
-  // Create nonce + counter
-  auto blockSize = cipher_.BlockSize();
-  memmove(scratch, iv_.data(), blockSize);
-  EncodeFixed64(scratch, blockIndex + initialCounter_);
-
-  // Encrypt nonce+counter
-  auto status = cipher_.Encrypt(scratch);
-  if (!status.ok()) {
-    return status;
-  }
-
-  // XOR data with ciphertext.
-  for (size_t i = 0; i < blockSize; i++) {
-    data[i] = data[i] ^ scratch[i];
-  }
-  return Status::OK();
-}
-
-// Decrypt a block of data at the given block index.
-// Length of data is equal to BlockSize();
-Status CTRCipherStream::DecryptBlock(uint64_t blockIndex, char *data, char* scratch) {
-  // For CTR decryption & encryption are the same
-  return EncryptBlock(blockIndex, data, scratch);
-}
-
-// GetPrefixLength returns the length of the prefix that is added to every file
-// and used for storing encryption options.
-// For optimal performance, the prefix length should be a multiple of
-// the page size.
-size_t CTREncryptionProvider::GetPrefixLength() {
-  return defaultPrefixLength;
-}
-
-// decodeCTRParameters decodes the initial counter & IV from the given
-// (plain text) prefix.
-static void decodeCTRParameters(const char *prefix, size_t blockSize, uint64_t &initialCounter, Slice &iv) {
-  // First block contains 64-bit initial counter
-  initialCounter = DecodeFixed64(prefix);
-  // Second block contains IV
-  iv = Slice(prefix + blockSize, blockSize);
-}
-
-// CreateNewPrefix initialized an allocated block of prefix memory
-// for a new file.
-Status CTREncryptionProvider::CreateNewPrefix(const std::string& /*fname*/,
-                                              char* prefix,
-                                              size_t prefixLength) {
-  // Create & seed rnd.
-  Random rnd((uint32_t)Env::Default()->NowMicros());
-  // Fill entire prefix block with random values.
-  for (size_t i = 0; i < prefixLength; i++) {
-    prefix[i] = rnd.Uniform(256) & 0xFF;
-  }
-  // Take random data to extract initial counter & IV
-  auto blockSize = cipher_.BlockSize();
-  uint64_t initialCounter;
-  Slice prefixIV;
-  decodeCTRParameters(prefix, blockSize, initialCounter, prefixIV);
-
-  // Now populate the rest of the prefix, starting from the third block.
-  PopulateSecretPrefixPart(prefix + (2 * blockSize), prefixLength - (2 * blockSize), blockSize);
-
-  // Encrypt the prefix, starting from block 2 (leave block 0, 1 with initial counter & IV unencrypted)
-  CTRCipherStream cipherStream(cipher_, prefixIV.data(), initialCounter);
-  auto status = cipherStream.Encrypt(0, prefix + (2 * blockSize), prefixLength - (2 * blockSize));
-  if (!status.ok()) {
-    return status;
-  }
-  return Status::OK();
-}
-
-// PopulateSecretPrefixPart initializes the data into a new prefix block
-// in plain text.
-// Returns the amount of space (starting from the start of the prefix)
-// that has been initialized.
-size_t CTREncryptionProvider::PopulateSecretPrefixPart(char* /*prefix*/,
-                                                       size_t /*prefixLength*/,
-                                                       size_t /*blockSize*/) {
-  // Nothing to do here, put in custom data in override when needed.
-  return 0;
-}
-
-Status CTREncryptionProvider::CreateCipherStream(
-    const std::string& fname, const EnvOptions& options, Slice& prefix,
-    std::unique_ptr<BlockAccessCipherStream>* result) {
-  // Read plain text part of prefix.
-  auto blockSize = cipher_.BlockSize();
-  uint64_t initialCounter;
-  Slice iv;
-  decodeCTRParameters(prefix.data(), blockSize, initialCounter, iv);
-
-  // Decrypt the encrypted part of the prefix, starting from block 2 (block 0, 1 with initial counter & IV are unencrypted)
-  CTRCipherStream cipherStream(cipher_, iv.data(), initialCounter);
-  auto status = cipherStream.Decrypt(0, (char*)prefix.data() + (2 * blockSize), prefix.size() - (2 * blockSize));
-  if (!status.ok()) {
-    return status;
-  }
-
-  // Create cipher stream
-  return CreateCipherStreamFromPrefix(fname, options, initialCounter, iv, prefix, result);
-}
-
-// CreateCipherStreamFromPrefix creates a block access cipher stream for a file given
-// given name and options. The given prefix is already decrypted.
-Status CTREncryptionProvider::CreateCipherStreamFromPrefix(
-    const std::string& /*fname*/, const EnvOptions& /*options*/,
-    uint64_t initialCounter, const Slice& iv, const Slice& /*prefix*/,
-    std::unique_ptr<BlockAccessCipherStream>* result) {
-  (*result) = std::unique_ptr<BlockAccessCipherStream>(
-      new CTRCipherStream(cipher_, iv.data(), initialCounter));
-  return Status::OK();
-}
-#endif // 0
 #endif // ROCKSDB_LITE
 
 }  // namespace rocksdb
