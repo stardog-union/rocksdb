@@ -50,8 +50,8 @@ struct Sha1Description_t {
 
     memset(desc, 0, EVP_MAX_MD_SIZE);
     if (0 != KeyDescStr.length()) {
-//TODO: why fail on Circle?      std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX *)> context(EVP_MD_CTX_new(), EVP_MD_CTX_free);
-      EVP_MD_CTX * context = EVP_MD_CTX_new();
+//      std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX *)> context(EVP_MD_CTX_new(), EVP_MD_CTX_free);
+      EVP_MD_CTX * context = EVP_MD_CTX_create();
 
       ret_val = EVP_DigestInit_ex(context, EVP_sha1(), nullptr);
       good = (1 == ret_val);
@@ -64,7 +64,7 @@ struct Sha1Description_t {
         ret_val = EVP_DigestFinal_ex(context, desc, &len);
         good = (1 == ret_val);
       }
-      EVP_MD_CTX_free(context);
+      EVP_MD_CTX_destroy(context);
     } else {
       good = false;
     }
