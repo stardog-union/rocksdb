@@ -50,19 +50,21 @@ struct Sha1Description_t {
 
     memset(desc, 0, EVP_MAX_MD_SIZE);
     if (0 != KeyDescStr.length()) {
-      std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX *)> context(EVP_MD_CTX_new(), EVP_MD_CTX_free);
+//TODO: why fail on Circle?      std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX *)> context(EVP_MD_CTX_new(), EVP_MD_CTX_free);
+      EVP_MD_CTX * context = EVP_MD_CTX_new();
 
-      ret_val = EVP_DigestInit_ex(context.get(), EVP_sha1(), nullptr);
+      ret_val = EVP_DigestInit_ex(context, EVP_sha1(), nullptr);
       good = (1 == ret_val);
       if (good) {
-        ret_val = EVP_DigestUpdate(context.get(), KeyDescStr.c_str(), KeyDescStr.length());
+        ret_val = EVP_DigestUpdate(context, KeyDescStr.c_str(), KeyDescStr.length());
         good = (1 == ret_val);
       }
 
       if (good) {
-        ret_val = EVP_DigestFinal_ex(context.get(), desc, &len);
+        ret_val = EVP_DigestFinal_ex(context, desc, &len);
         good = (1 == ret_val);
       }
+      EVP_MD_CTX_free(context);
     } else {
       good = false;
     }
@@ -126,19 +128,11 @@ public:
   }
 
   // BlockSize returns the size of each block supported by this cipher stream.
-  virtual size_t BlockSize() {return AES_BLOCK_SIZE;};
-
-  // Encrypt one or more (partial) blocks of data at the file offset.
-  // Length of data is given in dataSize.
-//  virtual Status Encrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
-
-  // Decrypt one or more (partial) blocks of data at the file offset.
-  // Length of data is given in dataSize.
-//  virtual Status Decrypt(uint64_t /*fileOffset*/, char */*data*/, size_t /*dataSize*/) {return Status::OK();}
+  virtual size_t BlockSize() override {return AES_BLOCK_SIZE;};
 
 protected:
   // Allocate scratch space which is passed to EncryptBlock/DecryptBlock.
-  virtual void AllocateScratch(std::string&) {};
+  virtual void AllocateScratch(std::string&) override {};
 
   // Encrypt a block of data at the given block index.
   // Length of data is equal to BlockSize();
