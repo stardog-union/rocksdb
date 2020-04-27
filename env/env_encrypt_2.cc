@@ -70,7 +70,6 @@ Sha1Description_t::Sha1Description_t(const std::string & key_desc_str) {
 }
 
 
-
 typedef union {
   uint64_t nums[2];
   uint8_t bytes[AES_BLOCK_SIZE];
@@ -114,12 +113,39 @@ Status AESBlockAccessCipherStream::DecryptBlock(uint64_t blockIndex, char *data,
   return EncryptBlock(blockIndex, data, scratch);
 }
 
+
+Status CTREncryptionProvider2::CreateNewPrefix(const std::string& /*fname*/, char *prefix, size_t prefixLength) {
+  Status s;
+  if (sizeof(Prefix0_t)<=prefixLength) {
+    int ret_val;
+
+    Prefix0_t * pf={(Prefix0_t *)prefix};
+    memcpy(pf->key_description_,key_desc_.desc, sizeof(key_desc_.desc));
+    ret_val = RAND_bytes((unsigned char *)&pf->nonce_, AES_BLOCK_SIZE/2);  //RAND_poll() to initialize
+    if (1 != ret_val) {
+      s = Status::NotSupported("RAND_bytes failed");
+    }
+  } else {
+    s = Status::NotSupported("Prefix size needs to be 28 or more");
+  }
+
+  return s;
+}
+
+
 // Returns an Env that encrypts data when stored on disk and decrypts data when
 // read from disk.
 Env* NewEncryptedEnv2(Env* base_env,
                       std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
                       std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write) {
   return new EncryptedEnv2(base_env, encrypt_read, encrypt_write);
+}
+
+EncryptedEnv2::EncryptedEnv2(Env* base_env,
+                             std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
+                             std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write)
+  : EnvWrapper(base_env), encrypt_read_(encrypt_read), encrypt_write_(encrypt_write) {
+  RAND_poll();
 }
 
 
