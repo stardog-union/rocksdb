@@ -43,34 +43,7 @@ struct Sha1Description_t {
     }
   }
 
-  Sha1Description_t(const std::string KeyDescStr) {
-    bool good={true};
-    int ret_val;
-    unsigned len;
-
-    memset(desc, 0, EVP_MAX_MD_SIZE);
-    if (0 != KeyDescStr.length()) {
-//      std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX *)> context(EVP_MD_CTX_new(), EVP_MD_CTX_free);
-      EVP_MD_CTX * context = EVP_MD_CTX_create();
-
-      ret_val = EVP_DigestInit_ex(context, EVP_sha1(), nullptr);
-      good = (1 == ret_val);
-      if (good) {
-        ret_val = EVP_DigestUpdate(context, KeyDescStr.c_str(), KeyDescStr.length());
-        good = (1 == ret_val);
-      }
-
-      if (good) {
-        ret_val = EVP_DigestFinal_ex(context, desc, &len);
-        good = (1 == ret_val);
-      }
-      EVP_MD_CTX_destroy(context);
-    } else {
-      good = false;
-    }
-
-    valid = good;
-  }
+  Sha1Description_t(const std::string & KeyDescStr);
 
   // goal is to explicitly remove desc from memory once no longer needed
   ~Sha1Description_t() {

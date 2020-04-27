@@ -37,6 +37,40 @@ namespace rocksdb {
 
 #ifndef ROCKSDB_LITE
 
+// this constructor needs to NOT be in .h file, or requires adding libcrypto in random user test suites
+
+Sha1Description_t::Sha1Description_t(const std::string & key_desc_str) {
+  bool good={true};
+  int ret_val;
+  unsigned len;
+
+  memset(desc, 0, EVP_MAX_MD_SIZE);
+  if (0 != key_desc_str.length()) {
+    // following not allowed because EVP_MD_CTX_destroy is a compatibility macro in ssl 1.1
+    //std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX *)> context(EVP_MD_CTX_create(), EVP_MD_CTX_destroy);
+    EVP_MD_CTX * context = EVP_MD_CTX_create();
+
+    ret_val = EVP_DigestInit_ex(context, EVP_sha1(), nullptr);
+    good = (1 == ret_val);
+    if (good) {
+      ret_val = EVP_DigestUpdate(context, key_desc_str.c_str(), key_desc_str.length());
+      good = (1 == ret_val);
+    }
+
+    if (good) {
+      ret_val = EVP_DigestFinal_ex(context, desc, &len);
+      good = (1 == ret_val);
+    }
+    EVP_MD_CTX_destroy(context);
+  } else {
+    good = false;
+  }
+
+  valid = good;
+}
+
+
+
 typedef union {
   uint64_t nums[2];
   uint8_t bytes[AES_BLOCK_SIZE];
