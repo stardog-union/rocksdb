@@ -69,6 +69,20 @@ Sha1Description_t::Sha1Description_t(const std::string & key_desc_str) {
   valid = good;
 }
 
+AesCtrKey_t::AesCtrKey_t(const std::string & key_str) : valid(false) {
+  // simple parse:  must be 64 characters long and hexadecimal values
+  if (64 == key_str.length()) {
+    auto bad_pos = key_str.find_first_not_of("abcdefABCDEF0123456789");
+    if (std::string::npos == bad_pos) {
+      for (size_t idx=0, idx2=0; idx<key_str.length(); idx+=2, ++idx2) {
+        std::string hex_string(key_str.substr(idx, 2));
+        key[idx2] = std::stoul(hex_string, 0, 16);
+      }
+      valid = true;
+    }
+  }
+}
+
 
 typedef union {
   uint64_t nums[2];
@@ -85,8 +99,9 @@ Status AESBlockAccessCipherStream::EncryptBlock(uint64_t blockIndex, char *data,
 
   //TODO: compile fail std::unique_ptr<EVP_CIPHER_CTX, void(*)(EVP_CIPHER_CTX *)> context(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
   EVP_CIPHER_CTX * context = EVP_CIPHER_CTX_new();
-  iv.nums[0]=0;
-  iv.nums[1]=0;
+
+  iv.nums[0]=0; // https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
+  iv.nums[1]=0; //  NIST document says IV is not used in CTR mode.
   ret_val = EVP_EncryptInit_ex(context, EVP_aes_256_ctr(), nullptr, key_.key, iv.bytes);
   if (1 == ret_val) {
     memcpy(block_in.bytes, nonce_, AES_BLOCK_SIZE/2);

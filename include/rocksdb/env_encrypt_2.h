@@ -54,6 +54,8 @@ struct Sha1Description_t {
   bool operator<(const Sha1Description_t &rhs) const {
     return memcmp(desc, rhs.desc, EVP_MAX_MD_SIZE)<0;
   }
+
+  bool IsValid() const {return valid;}
 };
 
 struct AesCtrKey_t {
@@ -64,7 +66,7 @@ struct AesCtrKey_t {
     memset(key, 0, EVP_MAX_KEY_LENGTH);
   }
 
-  AesCtrKey_t(const uint8_t * Key, size_t KeyLen) {
+  AesCtrKey_t(const uint8_t * Key, size_t KeyLen) : valid(false) {
     memset(key, 0, EVP_MAX_KEY_LENGTH);
     if (KeyLen <= EVP_MAX_KEY_LENGTH) {
       memcpy(key, Key, KeyLen);
@@ -74,11 +76,16 @@ struct AesCtrKey_t {
     }
   }
 
+  AesCtrKey_t(const std::string & key_str);
+
+
   // goal is to explicitly remove key from memory once no longer needed
   ~AesCtrKey_t() {
     memset(key, 0, EVP_MAX_KEY_LENGTH);
     valid = false;
   }
+
+  bool IsValid() const {return valid;}
 
 };
 
