@@ -172,8 +172,8 @@ protected:
 class EncryptedEnv2 : public EnvWrapper {
  public:
   EncryptedEnv2(Env* base_env,
-                std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
-                std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
+                std::map<const Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
+                std::pair<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
 
   bool IsWriteEncrypted() const {return nullptr!=encrypt_write_.second;}
 
@@ -384,8 +384,8 @@ class EncryptedEnv2 : public EnvWrapper {
 
 protected:
 
-  std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read_;
-  std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write_;
+  std::map<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read_;
+  std::pair<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write_;
 };
 
 
@@ -393,8 +393,8 @@ protected:
 // Returns an Env that encrypts data when stored on disk and decrypts data when
 // read from disk.
 Env* NewEncryptedEnv2(Env* base_env,
-                      std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
-                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
+                      std::map<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
+                      std::pair<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
 
 
 #endif // ROCKSDB_LITE
