@@ -39,8 +39,6 @@ struct Sha1Description_t {
     *this = rhs;
   }
 
-  //Sha1Description_t(const Sha1Description_t &&) = delete;
-
   Sha1Description_t & operator=(const Sha1Description_t &rhs) {
     memcpy(desc, rhs.desc, sizeof(desc));
     valid = rhs.valid;
@@ -149,11 +147,15 @@ public:
   CTREncryptionProvider2(const CTREncryptionProvider &&) = delete;
 
   CTREncryptionProvider2(const Sha1Description_t & key_desc, const AesCtrKey_t & key)
-    : valid_(true), key_desc_(key_desc), key_(key) {}
+    : valid_(false), key_desc_(key_desc), key_(key) {
+    valid_ = key_desc_.IsValid() && key_.IsValid();
+  }
 
   CTREncryptionProvider2(const std::string & key_desc_str,
                          const uint8_t unformatted_key[], int bytes)
-    : valid_(false), key_desc_(key_desc_str), key_(unformatted_key, bytes) {}
+    : valid_(false), key_desc_(key_desc_str), key_(unformatted_key, bytes) {
+    valid_ = key_desc_.IsValid() && key_.IsValid();
+  }
 
   virtual size_t GetPrefixLength() override {return sizeof(Prefix0_t) + sizeof(EncryptMarker_t);}
 
