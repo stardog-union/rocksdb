@@ -345,6 +345,7 @@ MAIN_SOURCES =                                                          \
   db/write_callback_test.cc                                             \
   db/write_controller_test.cc                                           \
   env/env_basic_test.cc                                                 \
+  env/env_encrypt_2_test.cc                                             \
   env/env_test.cc                                                       \
   env/mock_env_test.cc                                                  \
   memtable/inlineskiplist_test.cc                                       \

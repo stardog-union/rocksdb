@@ -35,11 +35,17 @@ struct Sha1Description_t {
     memset(desc, 0, EVP_MAX_MD_SIZE);
   }
 
-  Sha1Description_t(const Sha1Description_t & rhs) : valid(rhs.valid) {
-    memcpy(desc, rhs.desc, sizeof(desc));
+  Sha1Description_t(const Sha1Description_t & rhs) {
+    *this = rhs;
   }
 
   Sha1Description_t(const Sha1Description_t &&) = delete;
+
+  Sha1Description_t & operator=(const Sha1Description_t &rhs) {
+    memcpy(desc, rhs.desc, sizeof(desc));
+    valid = rhs.valid;
+    return *this;
+  }
 
   Sha1Description_t(uint8_t * Desc, size_t DescLen) : valid(false) {
     memset(desc, 0, EVP_MAX_MD_SIZE);

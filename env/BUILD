@@ -102,6 +102,17 @@ constrained_test(
 )
 
 constrained_test(
+    name = "env_encrypt_2_test",
+    srcs = ["env_encrypt_2_test.cc"],
+    deps = [
+        ":env",
+        ":test_utils",
+        "//util",
+        "//util:test_utils",
+    ],
+)
+
+constrained_test(
     name = "env_test",
     srcs = ["env_test.cc"],
     deps = [
