@@ -35,6 +35,10 @@ struct Sha1Description_t {
     memset(desc, 0, EVP_MAX_MD_SIZE);
   }
 
+  Sha1Description_t(const Sha1Description_t & rhs) = default;
+
+  Sha1Description_t(const Sha1Description_t &&) = delete;
+
   Sha1Description_t(uint8_t * Desc, size_t DescLen) : valid(false) {
     memset(desc, 0, EVP_MAX_MD_SIZE);
     if (DescLen<=EVP_MAX_MD_SIZE) {
@@ -134,6 +138,8 @@ class CTREncryptionProvider2 : public EncryptionProvider {
 public:
   CTREncryptionProvider2() = delete;
 
+  CTREncryptionProvider2(const CTREncryptionProvider &&) = delete;
+
   CTREncryptionProvider2(const Sha1Description_t & key_desc, const AesCtrKey_t & key)
     : valid_(true), key_desc_(key_desc), key_(key) {}
 
@@ -172,8 +178,8 @@ protected:
 class EncryptedEnv2 : public EnvWrapper {
  public:
   EncryptedEnv2(Env* base_env,
-                std::map<const Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
-                std::pair<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
+                std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
+                std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
 
   bool IsWriteEncrypted() const {return nullptr!=encrypt_write_.second;}
 
@@ -384,8 +390,8 @@ class EncryptedEnv2 : public EnvWrapper {
 
 protected:
 
-  std::map<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read_;
-  std::pair<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write_;
+  std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read_;
+  std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write_;
 };
 
 
@@ -393,8 +399,8 @@ protected:
 // Returns an Env that encrypts data when stored on disk and decrypts data when
 // read from disk.
 Env* NewEncryptedEnv2(Env* base_env,
-                      std::map<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
-                      std::pair<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
+                      std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
+                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
 
 
 #endif // ROCKSDB_LITE

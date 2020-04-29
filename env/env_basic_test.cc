@@ -117,9 +117,9 @@ static uint8_t key256[] = {0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
                            0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4};
 std::shared_ptr<EncryptionProvider> encrypt2_provider_ctr(new CTREncryptionProvider2(KeyName, key256, 32));
 
-static std::map<const Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_readers={
+static std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_readers={
   {KeyDesc, encrypt2_provider_ctr}};
-static std::pair<const Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_writer={
+static std::pair<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_writer={
   KeyDesc, encrypt2_provider_ctr};
 
 static std::unique_ptr<Env> encrypt2_env(new NormalizingEnvWrapper(NewEncryptedEnv2(Env::Default(),

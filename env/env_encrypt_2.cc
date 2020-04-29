@@ -151,14 +151,14 @@ Status CTREncryptionProvider2::CreateNewPrefix(const std::string& /*fname*/, cha
 // Returns an Env that encrypts data when stored on disk and decrypts data when
 // read from disk.
 Env* NewEncryptedEnv2(Env* base_env,
-                      std::map<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
-                      std::pair<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write) {
+                      std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
+                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write) {
   return new EncryptedEnv2(base_env, encrypt_read, encrypt_write);
 }
 
 EncryptedEnv2::EncryptedEnv2(Env* base_env,
-                             std::map<const Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
-                             std::pair<const Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write)
+                             std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
+                             std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write)
   : EnvWrapper(base_env), encrypt_read_(encrypt_read), encrypt_write_(encrypt_write) {
   RAND_poll();
 }
