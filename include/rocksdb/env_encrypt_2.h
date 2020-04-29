@@ -39,7 +39,7 @@ struct Sha1Description_t {
     memcpy(desc, rhs.desc, sizeof(desc));
   }
 
-  Sha1Description_t(const Sha1Description_t &&) = delete;
+  //Sha1Description_t(const Sha1Description_t &&) = delete;
 
   Sha1Description_t(uint8_t * Desc, size_t DescLen) : valid(false) {
     memset(desc, 0, EVP_MAX_MD_SIZE);
