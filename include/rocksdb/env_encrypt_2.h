@@ -39,7 +39,7 @@ struct Sha1Description_t {
     *this = rhs;
   }
 
-  Sha1Description_t(const Sha1Description_t &&) = delete;
+  //Sha1Description_t(const Sha1Description_t &&) = delete;
 
   Sha1Description_t & operator=(const Sha1Description_t &rhs) {
     memcpy(desc, rhs.desc, sizeof(desc));
