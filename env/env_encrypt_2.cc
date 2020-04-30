@@ -104,7 +104,6 @@ Status AESBlockAccessCipherStream::EncryptBlock(uint64_t blockIndex, char *data,
   int out_len=0, in_len={AES_BLOCK_SIZE}, ret_val;
 
   std::unique_ptr<EVP_CIPHER_CTX, void(*)(EVP_CIPHER_CTX *)> context(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
-  //EVP_CIPHER_CTX * context = EVP_CIPHER_CTX_new();
 
   // https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
   memcpy(iv.bytes, nonce_, AES_BLOCK_SIZE/2);
@@ -123,8 +122,6 @@ Status AESBlockAccessCipherStream::EncryptBlock(uint64_t blockIndex, char *data,
   } else {
     status = Status::InvalidArgument("EVP_EncryptInit_ex failed.");
   }
-
-  //EVP_CIPHER_CTX_free(context);
 
   // XOR data with ciphertext.
   uint64_t * data_ptr;

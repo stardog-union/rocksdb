@@ -228,6 +228,9 @@ public:
   Status TESTEncryptBlock(uint64_t blockIndex, char *data, char* scratch) {
     return EncryptBlock(blockIndex, data, scratch);
   }
+  Status TESTDecryptBlock(uint64_t blockIndex, char *data, char* scratch) {
+    return DecryptBlock(blockIndex, data, scratch);
+  }
 };
 
 TEST(EnvEncrypt2_Provider, NistExamples) {
@@ -243,19 +246,97 @@ TEST(EnvEncrypt2_Provider, NistExamples) {
   uint8_t cypher1[] = {0x60, 0x1e, 0xc3, 0x13, 0x77, 0x57, 0x89, 0xa5,
                        0xb7, 0xa7, 0xf5, 0x04, 0xbb, 0xf3, 0xd2, 0x28};
 
+  uint8_t plain2[] = {0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c,
+                      0x9e, 0xb7, 0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51};
+  uint8_t cypher2[] = {0xf4, 0x43, 0xe3, 0xca, 0x4d, 0x62, 0xb5, 0x9a,
+                       0xca, 0x84, 0xe9, 0x90, 0xca, 0xca, 0xf5, 0xc5};
+
+  uint8_t plain3[] = {0x30, 0xc8, 0x1c, 0x46, 0xa3, 0x5c, 0xe4, 0x11,
+                      0xe5, 0xfb, 0xc1, 0x19, 0x1a, 0x0a, 0x52, 0xef};
+  uint8_t cypher3[] = {0x2b, 0x09, 0x30, 0xda, 0xa2, 0x3d, 0xe9, 0x4c,
+                       0xe8, 0x70, 0x17, 0xba, 0x2d, 0x84, 0x98, 0x8d};
+
+  uint8_t plain4[] = {0xf6, 0x9f, 0x24, 0x45, 0xdf, 0x4f, 0x9b, 0x17,
+                      0xad, 0x2b, 0x41, 0x7b, 0xe6, 0x6c, 0x37, 0x10};
+  uint8_t cypher4[] = {0xdf, 0xc9, 0xc5, 0x8d, 0xb6, 0x7a, 0xad, 0xa6,
+                       0x13, 0xc2, 0xdd, 0x08, 0x45, 0x79, 0x41, 0xa6};
+
 
   CTREncryptionProvider2 provider("NistExampleKey", key, sizeof(key));
   // only first 8 bytes of init taken in next call
   std::unique_ptr<BlockAccessCipherStream> stream(provider.CreateCipherStream2(1, init));
 
   uint64_t offset;
-  memcpy((void*)&offset, (void*)&init[8], 8);
   uint8_t block[sizeof(plain1)];
+  uint8_t * patch = (uint8_t*)&offset; // little endian assumed
+
+  //
+  // forward ... encryption
+  //
+  memcpy((void*)&offset, (void*)&init[8], 8);
   memcpy((void*)block, (void*)plain1, 16);
   CipherStreamWrapper * wrap = (CipherStreamWrapper *)stream.get();
 
   Status status = wrap->TESTEncryptBlock(offset, (char*)block, nullptr);
   ASSERT_TRUE(0 == memcmp(cypher1, block, sizeof(block)));
+
+  memcpy((void*)&offset, (void*)&init[8], 8);
+  memcpy((void*)block, (void*)plain2, 16);
+  *(patch+7) = 0x00;
+  *(patch+6) = 0xff;
+
+  status = wrap->TESTEncryptBlock(offset, (char*)block, nullptr);
+  ASSERT_TRUE(0 == memcmp(cypher2, block, sizeof(block)));
+
+  memcpy((void*)&offset, (void*)&init[8], 8);
+  memcpy((void*)block, (void*)plain3, 16);
+  *(patch+7) = 0x01;
+  *(patch+6) = 0xff;
+
+  status = wrap->TESTEncryptBlock(offset, (char*)block, nullptr);
+  ASSERT_TRUE(0 == memcmp(cypher3, block, sizeof(block)));
+
+  memcpy((void*)&offset, (void*)&init[8], 8);
+  memcpy((void*)block, (void*)plain4, 16);
+  *(patch+7) = 0x02;
+  *(patch+6) = 0xff;
+
+  status = wrap->TESTEncryptBlock(offset, (char*)block, nullptr);
+  ASSERT_TRUE(0 == memcmp(cypher4, block, sizeof(block)));
+
+  //
+  // backward -- decryption
+  //
+  memcpy((void*)&offset, (void*)&init[8], 8);
+  memcpy((void*)block, (void*)cypher1, 16);
+
+  status = wrap->TESTDecryptBlock(offset, (char*)block, nullptr);
+  ASSERT_TRUE(0 == memcmp(plain1, block, sizeof(block)));
+
+  memcpy((void*)&offset, (void*)&init[8], 8);
+  memcpy((void*)block, (void*)cypher2, 16);
+  *(patch+7) = 0x00;
+  *(patch+6) = 0xff;
+
+  status = wrap->TESTDecryptBlock(offset, (char*)block, nullptr);
+  ASSERT_TRUE(0 == memcmp(plain2, block, sizeof(block)));
+
+  memcpy((void*)&offset, (void*)&init[8], 8);
+  memcpy((void*)block, (void*)cypher3, 16);
+  *(patch+7) = 0x01;
+  *(patch+6) = 0xff;
+
+  status = wrap->TESTDecryptBlock(offset, (char*)block, nullptr);
+  ASSERT_TRUE(0 == memcmp(plain3, block, sizeof(block)));
+
+  memcpy((void*)&offset, (void*)&init[8], 8);
+  memcpy((void*)block, (void*)cypher4, 16);
+  *(patch+7) = 0x02;
+  *(patch+6) = 0xff;
+
+  status = wrap->TESTDecryptBlock(offset, (char*)block, nullptr);
+  ASSERT_TRUE(0 == memcmp(plain4, block, sizeof(block)));
+
 }
 
 }  // namespace rocksdb
