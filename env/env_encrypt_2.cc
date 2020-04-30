@@ -84,54 +84,55 @@ AesCtrKey_t::AesCtrKey_t(const std::string & key_str) : valid(false) {
 }
 
 
+//
+// AES_BLOCK_SIZE assumed to be 16
+//
 typedef union {
   uint64_t nums[2];
   uint8_t bytes[AES_BLOCK_SIZE];
 } AesAlignedBlock_t;
 
 Status AESBlockAccessCipherStream::EncryptBlock(uint64_t blockIndex, char *data, char* /*scratch*/) {
-  assert(AES_BLOCK_SIZE==16);        // AES_BLOCK_SIZE assumed to be 16
+  //
+  // AES_BLOCK_SIZE assumed to be 16
+  //
+  assert(AES_BLOCK_SIZE==16);
   assert(sizeof(AesAlignedBlock_t)==AES_BLOCK_SIZE);
 
   Status status;
   ALIGN16 AesAlignedBlock_t block_in, block_out, iv;
   int out_len=0, in_len={AES_BLOCK_SIZE}, ret_val;
 
-  //TODO: compile fail std::unique_ptr<EVP_CIPHER_CTX, void(*)(EVP_CIPHER_CTX *)> context(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
-  EVP_CIPHER_CTX * context = EVP_CIPHER_CTX_new();
+  std::unique_ptr<EVP_CIPHER_CTX, void(*)(EVP_CIPHER_CTX *)> context(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
+  //EVP_CIPHER_CTX * context = EVP_CIPHER_CTX_new();
 
-  iv.nums[0]=0; // https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
-  iv.nums[1]=0; //  NIST document says IV is not used in CTR mode.
-    memcpy(block_in.bytes, nonce_, AES_BLOCK_SIZE/2);
-    EncodeFixed64((char*)&block_in.bytes[AES_BLOCK_SIZE/2], blockIndex); // this will be little endian
-    iv.nums[0]=block_in.nums[0];
-    iv.nums[1]=block_in.nums[1];
-    block_in.nums[0] = 0;
-    block_in.nums[1] = 0;
-    (void)iv;
-  ret_val = EVP_EncryptInit_ex(context, EVP_aes_256_ctr(), nullptr, key_.key, iv.bytes);
+  // https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
+  memcpy(iv.bytes, nonce_, AES_BLOCK_SIZE/2);
+  EncodeFixed64((char*)&iv.bytes[AES_BLOCK_SIZE/2], blockIndex); // this will be little endian
+  block_in.nums[0] = 0;
+  block_in.nums[1] = 0;
+
+  ret_val = EVP_EncryptInit_ex(context.get(), EVP_aes_256_ctr(), nullptr, key_.key, iv.bytes);
   if (1 == ret_val) {
-//    memcpy(block_in.bytes, nonce_, AES_BLOCK_SIZE/2);
-//    EncodeFixed64((char*)&block_in.bytes[AES_BLOCK_SIZE/2], blockIndex); // this will be little endian
-    block_out.nums[0] = 0;
-    block_out.nums[1] = 0;
-    ret_val = EVP_EncryptUpdate(context, block_out.bytes, &out_len, block_in.bytes, in_len);
-    ret_val = EVP_EncryptFinal(context, block_out.bytes, &out_len);
+    ret_val = EVP_EncryptUpdate(context.get(), block_out.bytes, &out_len, block_in.bytes, in_len);
 
     if (1 != ret_val || AES_BLOCK_SIZE != out_len) {
       status = Status::InvalidArgument("EVP_EncryptUpdate failed: ",
-                               AES_BLOCK_SIZE == out_len ? "bad return value" : "output length short");
+                                       AES_BLOCK_SIZE == out_len ? "bad return value" : "output length short");
     }
   } else {
     status = Status::InvalidArgument("EVP_EncryptInit_ex failed.");
   }
 
-  EVP_CIPHER_CTX_free(context);
+  //EVP_CIPHER_CTX_free(context);
 
   // XOR data with ciphertext.
-  for (size_t idx = 0; idx < AES_BLOCK_SIZE; ++idx) {
-    data[idx] = data[idx] ^ block_out.bytes[idx];
-  }
+  uint64_t * data_ptr;
+  data_ptr = (uint64_t*)data;
+  *data_ptr ^= block_out.nums[0];
+  data_ptr = (uint64_t*)(data+8);
+  *data_ptr ^= block_out.nums[1];
+
   return status;
 }
 
