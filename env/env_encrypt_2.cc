@@ -70,6 +70,8 @@ Sha1Description_t::Sha1Description_t(const std::string & key_desc_str) {
 }
 
 AesCtrKey_t::AesCtrKey_t(const std::string & key_str) : valid(false) {
+  memset(key, 0, EVP_MAX_KEY_LENGTH);
+
   // simple parse:  must be 64 characters long and hexadecimal values
   if (64 == key_str.length()) {
     auto bad_pos = key_str.find_first_not_of("abcdefABCDEF0123456789");
