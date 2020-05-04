@@ -65,6 +65,10 @@ struct Sha1Description_t {
     return memcmp(desc, rhs.desc, EVP_MAX_MD_SIZE)<0;
   }
 
+  bool operator==(const Sha1Description_t &rhs) const {
+    return 0==memcmp(desc, rhs.desc, EVP_MAX_MD_SIZE) && valid == rhs.valid;
+  }
+
   bool IsValid() const {return valid;}
 };
 
@@ -93,6 +97,10 @@ struct AesCtrKey_t {
   ~AesCtrKey_t() {
     memset(key, 0, EVP_MAX_KEY_LENGTH);
     valid = false;
+  }
+
+  bool operator==(const AesCtrKey_t & rhs) const {
+    return (0==memcmp(key, rhs.key, EVP_MAX_KEY_LENGTH)) && (valid == rhs.valid);
   }
 
   bool IsValid() const {return valid;}
