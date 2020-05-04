@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <cctype>
 #include <iostream>
-#include <byteswap.h>
 
 #include "openssl/rand.h"
 #include "openssl/aes.h"
