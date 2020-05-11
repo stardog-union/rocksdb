@@ -12,6 +12,7 @@ PLATFORM_DEFINES = select({
         "ROCKSDB_SCHED_GETCPU_PRESENT",
         "rocksdb_shared_EXPORTS",
         "NPERF_CONTEXT",
+        "ROCKSDB_OPENSSL_AES_CTR",
     ],
     "//:osx": [
         "OS_MACOSX",
@@ -20,6 +21,7 @@ PLATFORM_DEFINES = select({
         "ROCKSDB_LIB_IO_POSIX",
         "rocksdb_shared_EXPORTS",
         "NPERF_CONTEXT",
+        "ROCKSDB_OPENSSL_AES_CTR",
     ],
     "//:windows": [
         "OS_WIN",

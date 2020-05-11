@@ -6,6 +6,7 @@
 //
 // env_encryption.cc copied to this file then modified.
 
+#ifdef ROCKSDB_OPENSSL_AES_CTR
 #ifndef ROCKSDB_LITE
 
 #include <algorithm>
@@ -424,3 +425,5 @@ Env* NewEncryptedEnv2(Env* base_env,
 #endif // ROCKSDB_LITE
 
 }  // namespace rocksdb
+
+#endif // ROCKSDB_OPENSSL_AES_CTR

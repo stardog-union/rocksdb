@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
-
 #include "rocksdb/env_encrypt2.h"
 
 #include "util/testharness.h"
+
+#ifdef ROCKSDB_OPENSSL_AES_CTR
 
 namespace rocksdb {
 
@@ -652,9 +653,10 @@ TEST_P(EnvMoreTestWithParam, GetChildren) {
   ASSERT_EQ(0U, children.size());
 }
 
-
-
 }  // namespace rocksdb
+
+#endif // ROCKSDB_OPENSSL_AES_CTR
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
