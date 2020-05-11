@@ -20,51 +20,53 @@ class EncryptionProvider;
 Env* NewEncryptedEnv(Env* base_env, EncryptionProvider* provider);
 
 // BlockAccessCipherStream is the base class for any cipher stream that
-// supports random access at block level (without requiring data from other blocks).
-// E.g. CTR (Counter operation mode) supports this requirement.
+// supports random access at block level (without requiring data from other
+// blocks). E.g. CTR (Counter operation mode) supports this requirement.
 class BlockAccessCipherStream {
-    public:
-      virtual ~BlockAccessCipherStream() {};
+ public:
+  virtual ~BlockAccessCipherStream(){};
 
-      // BlockSize returns the size of each block supported by this cipher stream.
-      virtual size_t BlockSize() = 0;
+  // BlockSize returns the size of each block supported by this cipher stream.
+  virtual size_t BlockSize() = 0;
 
-      // Encrypt one or more (partial) blocks of data at the file offset.
-      // Length of data is given in dataSize.
-      virtual Status Encrypt(uint64_t fileOffset, char *data, size_t dataSize);
+  // Encrypt one or more (partial) blocks of data at the file offset.
+  // Length of data is given in dataSize.
+  virtual Status Encrypt(uint64_t fileOffset, char* data, size_t dataSize);
 
-      // Decrypt one or more (partial) blocks of data at the file offset.
-      // Length of data is given in dataSize.
-      virtual Status Decrypt(uint64_t fileOffset, char *data, size_t dataSize);
+  // Decrypt one or more (partial) blocks of data at the file offset.
+  // Length of data is given in dataSize.
+  virtual Status Decrypt(uint64_t fileOffset, char* data, size_t dataSize);
 
-    protected:
-      // Allocate scratch space which is passed to EncryptBlock/DecryptBlock.
-      virtual void AllocateScratch(std::string&) = 0;
+ protected:
+  // Allocate scratch space which is passed to EncryptBlock/DecryptBlock.
+  virtual void AllocateScratch(std::string&) = 0;
 
-      // Encrypt a block of data at the given block index.
-      // Length of data is equal to BlockSize();
-      virtual Status EncryptBlock(uint64_t blockIndex, char *data, char* scratch) = 0;
+  // Encrypt a block of data at the given block index.
+  // Length of data is equal to BlockSize();
+  virtual Status EncryptBlock(uint64_t blockIndex, char* data,
+                              char* scratch) = 0;
 
-      // Decrypt a block of data at the given block index.
-      // Length of data is equal to BlockSize();
-      virtual Status DecryptBlock(uint64_t blockIndex, char *data, char* scratch) = 0;
+  // Decrypt a block of data at the given block index.
+  // Length of data is equal to BlockSize();
+  virtual Status DecryptBlock(uint64_t blockIndex, char* data,
+                              char* scratch) = 0;
 };
 
 // BlockCipher
 class BlockCipher {
-    public:
-      virtual ~BlockCipher() {};
+ public:
+  virtual ~BlockCipher(){};
 
-      // BlockSize returns the size of each block supported by this cipher stream.
-      virtual size_t BlockSize() = 0;
+  // BlockSize returns the size of each block supported by this cipher stream.
+  virtual size_t BlockSize() = 0;
 
-      // Encrypt a block of data.
-      // Length of data is equal to BlockSize().
-      virtual Status Encrypt(char *data) = 0;
+  // Encrypt a block of data.
+  // Length of data is equal to BlockSize().
+  virtual Status Encrypt(char* data) = 0;
 
-      // Decrypt a block of data.
-      // Length of data is equal to BlockSize().
-      virtual Status Decrypt(char *data) = 0;
+  // Decrypt a block of data.
+  // Length of data is equal to BlockSize().
+  virtual Status Decrypt(char* data) = 0;
 };
 
 // Implements a BlockCipher using ROT13.
@@ -72,23 +74,23 @@ class BlockCipher {
 // Note: This is a sample implementation of BlockCipher,
 // it is NOT considered safe and should NOT be used in production.
 class ROT13BlockCipher : public BlockCipher {
-    private:
-      size_t blockSize_;
-    public:
-      ROT13BlockCipher(size_t blockSize)
-        : blockSize_(blockSize) {}
-      virtual ~ROT13BlockCipher() {};
+ private:
+  size_t blockSize_;
 
-      // BlockSize returns the size of each block supported by this cipher stream.
-      virtual size_t BlockSize() override { return blockSize_; }
+ public:
+  ROT13BlockCipher(size_t blockSize) : blockSize_(blockSize) {}
+  virtual ~ROT13BlockCipher(){};
 
-      // Encrypt a block of data.
-      // Length of data is equal to BlockSize().
-      virtual Status Encrypt(char *data) override;
+  // BlockSize returns the size of each block supported by this cipher stream.
+  virtual size_t BlockSize() override { return blockSize_; }
 
-      // Decrypt a block of data.
-      // Length of data is equal to BlockSize().
-      virtual Status Decrypt(char *data) override;
+  // Encrypt a block of data.
+  // Length of data is equal to BlockSize().
+  virtual Status Encrypt(char* data) override;
+
+  // Decrypt a block of data.
+  // Length of data is equal to BlockSize().
+  virtual Status Decrypt(char* data) override;
 };
 
 // CTRCipherStream implements BlockAccessCipherStream using an
@@ -98,53 +100,56 @@ class ROT13BlockCipher : public BlockCipher {
 // Note: This is a possible implementation of BlockAccessCipherStream,
 // it is considered suitable for use.
 class CTRCipherStream final : public BlockAccessCipherStream {
-    private:
-      BlockCipher& cipher_;
-      std::string iv_;
-      uint64_t initialCounter_;
-    public:
-      CTRCipherStream(BlockCipher& c, const char *iv, uint64_t initialCounter)
-        : cipher_(c), iv_(iv, c.BlockSize()), initialCounter_(initialCounter) {};
-      virtual ~CTRCipherStream() {};
+ private:
+  BlockCipher& cipher_;
+  std::string iv_;
+  uint64_t initialCounter_;
 
-      // BlockSize returns the size of each block supported by this cipher stream.
-      virtual size_t BlockSize() override { return cipher_.BlockSize(); }
+ public:
+  CTRCipherStream(BlockCipher& c, const char* iv, uint64_t initialCounter)
+      : cipher_(c), iv_(iv, c.BlockSize()), initialCounter_(initialCounter){};
+  virtual ~CTRCipherStream(){};
 
-    protected:
-      // Allocate scratch space which is passed to EncryptBlock/DecryptBlock.
-      virtual void AllocateScratch(std::string&) override;
+  // BlockSize returns the size of each block supported by this cipher stream.
+  virtual size_t BlockSize() override { return cipher_.BlockSize(); }
 
-      // Encrypt a block of data at the given block index.
-      // Length of data is equal to BlockSize();
-      virtual Status EncryptBlock(uint64_t blockIndex, char *data, char *scratch) override;
+ protected:
+  // Allocate scratch space which is passed to EncryptBlock/DecryptBlock.
+  virtual void AllocateScratch(std::string&) override;
 
-      // Decrypt a block of data at the given block index.
-      // Length of data is equal to BlockSize();
-      virtual Status DecryptBlock(uint64_t blockIndex, char *data, char *scratch) override;
+  // Encrypt a block of data at the given block index.
+  // Length of data is equal to BlockSize();
+  virtual Status EncryptBlock(uint64_t blockIndex, char* data,
+                              char* scratch) override;
+
+  // Decrypt a block of data at the given block index.
+  // Length of data is equal to BlockSize();
+  virtual Status DecryptBlock(uint64_t blockIndex, char* data,
+                              char* scratch) override;
 };
 
-// The encryption provider is used to create a cipher stream for a specific file.
-// The returned cipher stream will be used for actual encryption/decryption
-// actions.
+// The encryption provider is used to create a cipher stream for a specific
+// file. The returned cipher stream will be used for actual
+// encryption/decryption actions.
 class EncryptionProvider {
  public:
-    virtual ~EncryptionProvider() {};
+  virtual ~EncryptionProvider(){};
 
-    // GetPrefixLength returns the length of the prefix that is added to every file
-    // and used for storing encryption options.
-    // For optimal performance, the prefix length should be a multiple of
-    // the page size.
-    virtual size_t GetPrefixLength() = 0;
+  // GetPrefixLength returns the length of the prefix that is added to every
+  // file and used for storing encryption options. For optimal performance, the
+  // prefix length should be a multiple of the page size.
+  virtual size_t GetPrefixLength() = 0;
 
-    // CreateNewPrefix initialized an allocated block of prefix memory
-    // for a new file.
-    virtual Status CreateNewPrefix(const std::string& fname, char *prefix, size_t prefixLength) = 0;
+  // CreateNewPrefix initialized an allocated block of prefix memory
+  // for a new file.
+  virtual Status CreateNewPrefix(const std::string& fname, char* prefix,
+                                 size_t prefixLength) = 0;
 
-    // CreateCipherStream creates a block access cipher stream for a file given
-    // given name and options.
-    virtual Status CreateCipherStream(
-        const std::string& fname, const EnvOptions& options, Slice& prefix,
-        std::unique_ptr<BlockAccessCipherStream>* result) = 0;
+  // CreateCipherStream creates a block access cipher stream for a file given
+  // given name and options.
+  virtual Status CreateCipherStream(
+      const std::string& fname, const EnvOptions& options, Slice& prefix,
+      std::unique_ptr<BlockAccessCipherStream>* result) = 0;
 };
 
 // This encryption provider uses a CTR cipher stream, with a given block cipher
@@ -153,62 +158,68 @@ class EncryptionProvider {
 // Note: This is a possible implementation of EncryptionProvider,
 // it is considered suitable for use, provided a safe BlockCipher is used.
 class CTREncryptionProvider : public EncryptionProvider {
-    private:
-      BlockCipher& cipher_;
-    protected:
-      const static size_t defaultPrefixLength = 4096;
+ private:
+  BlockCipher& cipher_;
+
+ protected:
+  const static size_t defaultPrefixLength = 4096;
 
  public:
-      CTREncryptionProvider(BlockCipher& c)
-        : cipher_(c) {};
-    virtual ~CTREncryptionProvider() {}
+  CTREncryptionProvider(BlockCipher& c) : cipher_(c){};
+  virtual ~CTREncryptionProvider() {}
 
-    // GetPrefixLength returns the length of the prefix that is added to every file
-    // and used for storing encryption options.
-    // For optimal performance, the prefix length should be a multiple of
-    // the page size.
-    virtual size_t GetPrefixLength() override;
+  // GetPrefixLength returns the length of the prefix that is added to every
+  // file
+  // and used for storing encryption options.
+  // For optimal performance, the prefix length should be a multiple of
+  // the page size.
+  virtual size_t GetPrefixLength() override;
 
-    // CreateNewPrefix initialized an allocated block of prefix memory
-    // for a new file.
-    virtual Status CreateNewPrefix(const std::string& fname, char *prefix, size_t prefixLength) override;
+  // CreateNewPrefix initialized an allocated block of prefix memory
+  // for a new file.
+  virtual Status CreateNewPrefix(const std::string& fname, char* prefix,
+                                 size_t prefixLength) override;
 
-    // CreateCipherStream creates a block access cipher stream for a file given
-    // given name and options.
-    virtual Status CreateCipherStream(
-        const std::string& fname, const EnvOptions& options, Slice& prefix,
-        std::unique_ptr<BlockAccessCipherStream>* result) override;
+  // CreateCipherStream creates a block access cipher stream for a file given
+  // given name and options.
+  virtual Status CreateCipherStream(
+      const std::string& fname, const EnvOptions& options, Slice& prefix,
+      std::unique_ptr<BlockAccessCipherStream>* result) override;
 
-   protected:
-    // PopulateSecretPrefixPart initializes the data into a new prefix block
-    // that will be encrypted. This function will store the data in plain text.
-    // It will be encrypted later (before written to disk).
-    // Returns the amount of space (starting from the start of the prefix)
-    // that has been initialized.
-    virtual size_t PopulateSecretPrefixPart(char *prefix, size_t prefixLength, size_t blockSize);
+ protected:
+  // PopulateSecretPrefixPart initializes the data into a new prefix block
+  // that will be encrypted. This function will store the data in plain text.
+  // It will be encrypted later (before written to disk).
+  // Returns the amount of space (starting from the start of the prefix)
+  // that has been initialized.
+  virtual size_t PopulateSecretPrefixPart(char* prefix, size_t prefixLength,
+                                          size_t blockSize);
 
-    // CreateCipherStreamFromPrefix creates a block access cipher stream for a file given
-    // given name and options. The given prefix is already decrypted.
-    virtual Status CreateCipherStreamFromPrefix(
-        const std::string& fname, const EnvOptions& options,
-        uint64_t initialCounter, const Slice& iv, const Slice& prefix,
-        std::unique_ptr<BlockAccessCipherStream>* result);
+  // CreateCipherStreamFromPrefix creates a block access cipher stream for a
+  // file given
+  // given name and options. The given prefix is already decrypted.
+  virtual Status CreateCipherStreamFromPrefix(
+      const std::string& fname, const EnvOptions& options,
+      uint64_t initialCounter, const Slice& iv, const Slice& prefix,
+      std::unique_ptr<BlockAccessCipherStream>* result);
 };
 
-
 class EncryptedSequentialFile : public SequentialFile {
-  private:
-    std::unique_ptr<SequentialFile> file_;
-    std::unique_ptr<BlockAccessCipherStream> stream_;
-    uint64_t offset_;
-    size_t prefixLength_;
+ private:
+  std::unique_ptr<SequentialFile> file_;
+  std::unique_ptr<BlockAccessCipherStream> stream_;
+  uint64_t offset_;
+  size_t prefixLength_;
 
-     public:
+ public:
   // Default ctor. Given underlying sequential file is supposed to be at
   // offset == prefixLength.
-  EncryptedSequentialFile(SequentialFile* f, BlockAccessCipherStream* s, size_t prefixLength)
-      : file_(f), stream_(s), offset_(prefixLength), prefixLength_(prefixLength) {
-  }
+  EncryptedSequentialFile(SequentialFile* f, BlockAccessCipherStream* s,
+                          size_t prefixLength)
+      : file_(f),
+        stream_(s),
+        offset_(prefixLength),
+        prefixLength_(prefixLength) {}
 
   // Read up to "n" bytes from the file.  "scratch[0..n-1]" may be
   // written by this routine.  Sets "*result" to the data that was
@@ -244,20 +255,21 @@ class EncryptedSequentialFile : public SequentialFile {
 
   // Positioned Read for direct I/O
   // If Direct I/O enabled, offset, n, and scratch should be properly aligned
-  virtual Status PositionedRead(uint64_t offset, size_t n, Slice* result, char* scratch) override;
-
+  virtual Status PositionedRead(uint64_t offset, size_t n, Slice* result,
+                                char* scratch) override;
 };
 
 // A file abstraction for randomly reading the contents of a file.
 class EncryptedRandomAccessFile : public RandomAccessFile {
-  private:
-    std::unique_ptr<RandomAccessFile> file_;
-    std::unique_ptr<BlockAccessCipherStream> stream_;
-    size_t prefixLength_;
+ private:
+  std::unique_ptr<RandomAccessFile> file_;
+  std::unique_ptr<BlockAccessCipherStream> stream_;
+  size_t prefixLength_;
 
  public:
-  EncryptedRandomAccessFile(RandomAccessFile* f, BlockAccessCipherStream* s, size_t prefixLength)
-    : file_(f), stream_(s), prefixLength_(prefixLength) { }
+  EncryptedRandomAccessFile(RandomAccessFile* f, BlockAccessCipherStream* s,
+                            size_t prefixLength)
+      : file_(f), stream_(s), prefixLength_(prefixLength) {}
 
   // Read up to "n" bytes from the file starting at "offset".
   // "scratch[0..n-1]" may be written by this routine.  Sets "*result"
@@ -269,7 +281,8 @@ class EncryptedRandomAccessFile : public RandomAccessFile {
   //
   // Safe for concurrent use by multiple threads.
   // If Direct I/O enabled, offset, n, and scratch should be aligned properly.
-  virtual Status Read(uint64_t offset, size_t n, Slice* result, char* scratch) const override;
+  virtual Status Read(uint64_t offset, size_t n, Slice* result,
+                      char* scratch) const override;
 
   // Readahead the file starting from offset by n bytes for caching.
   virtual Status Prefetch(uint64_t offset, size_t n) override;
@@ -311,15 +324,19 @@ class EncryptedRandomAccessFile : public RandomAccessFile {
 // must provide buffering since callers may append small fragments
 // at a time to the file.
 class EncryptedWritableFile : public WritableFileWrapper {
-  private:
-    std::unique_ptr<WritableFile> file_;
-    std::unique_ptr<BlockAccessCipherStream> stream_;
-    size_t prefixLength_;
+ private:
+  std::unique_ptr<WritableFile> file_;
+  std::unique_ptr<BlockAccessCipherStream> stream_;
+  size_t prefixLength_;
 
  public:
   // Default ctor. Prefix is assumed to be written already.
-  EncryptedWritableFile(WritableFile* f, BlockAccessCipherStream* s, size_t prefixLength)
-    : WritableFileWrapper(f), file_(f), stream_(s), prefixLength_(prefixLength) { }
+  EncryptedWritableFile(WritableFile* f, BlockAccessCipherStream* s,
+                        size_t prefixLength)
+      : WritableFileWrapper(f),
+        file_(f),
+        stream_(s),
+        prefixLength_(prefixLength) {}
 
   Status Append(const Slice& data) override;
 
@@ -333,7 +350,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
   // aligned buffer for Direct I/O
   virtual size_t GetRequiredBufferAlignment() const override;
 
-    /*
+  /*
    * Get the size of valid data in the file.
    */
   virtual uint64_t GetFileSize() override;
@@ -344,7 +361,7 @@ class EncryptedWritableFile : public WritableFileWrapper {
   // with other writes to follow.
   virtual Status Truncate(uint64_t size) override;
 
-    // Remove any kind of caching of data from the offset to offset+length
+  // Remove any kind of caching of data from the offset to offset+length
   // of this file. If the length is 0, then it refers to the end of file.
   // If the system is not caching the file contents, then this is a noop.
   // This call has no effect on dirty pages in the cache.
@@ -371,14 +388,15 @@ class EncryptedWritableFile : public WritableFileWrapper {
 
 // A file abstraction for random reading and writing.
 class EncryptedRandomRWFile : public RandomRWFile {
-  private:
-    std::unique_ptr<RandomRWFile> file_;
-    std::unique_ptr<BlockAccessCipherStream> stream_;
-    size_t prefixLength_;
+ private:
+  std::unique_ptr<RandomRWFile> file_;
+  std::unique_ptr<BlockAccessCipherStream> stream_;
+  size_t prefixLength_;
 
  public:
-  EncryptedRandomRWFile(RandomRWFile* f, BlockAccessCipherStream* s, size_t prefixLength)
-    : file_(f), stream_(s), prefixLength_(prefixLength) {}
+  EncryptedRandomRWFile(RandomRWFile* f, BlockAccessCipherStream* s,
+                        size_t prefixLength)
+      : file_(f), stream_(s), prefixLength_(prefixLength) {}
 
   // Indicates if the class makes use of direct I/O
   // If false you must pass aligned buffer to Write()
@@ -395,7 +413,8 @@ class EncryptedRandomRWFile : public RandomRWFile {
   // Read up to `n` bytes starting from offset `offset` and store them in
   // result, provided `scratch` size should be at least `n`.
   // Returns Status::OK() on success.
-  virtual Status Read(uint64_t offset, size_t n, Slice* result, char* scratch) const override;
+  virtual Status Read(uint64_t offset, size_t n, Slice* result,
+                      char* scratch) const override;
 
   virtual Status Flush() override;
 
@@ -405,7 +424,6 @@ class EncryptedRandomRWFile : public RandomRWFile {
 
   virtual Status Close() override;
 };
-
 
 }  // namespace rocksdb
 

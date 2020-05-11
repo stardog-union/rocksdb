@@ -1,19 +1,19 @@
 // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
+//
+// Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 #include "env/mock_env.h"
 #include "rocksdb/env.h"
 #include "rocksdb/env_encryption.h"
-#include "rocksdb/env_encrypt_2.h"
 #include "rocksdb/utilities/object_registry.h"
 #include "util/testharness.h"
-
 namespace rocksdb {
 
 // Normalizes trivial differences across Envs such that these test cases can
@@ -23,8 +23,8 @@ class NormalizingEnvWrapper : public EnvWrapper {
   explicit NormalizingEnvWrapper(Env* base) : EnvWrapper(base) {}
 
   // Removes . and .. from directory listing
-  virtual Status GetChildren(const std::string& dir,
-                             std::vector<std::string>* result) override {
+  Status GetChildren(const std::string& dir,
+                     std::vector<std::string>* result) override {
     Status status = EnvWrapper::GetChildren(dir, result);
     if (status.ok()) {
       result->erase(std::remove_if(result->begin(), result->end(),
@@ -37,7 +37,7 @@ class NormalizingEnvWrapper : public EnvWrapper {
   }
 
   // Removes . and .. from directory listing
-  virtual Status GetChildrenFileAttributes(
+  Status GetChildrenFileAttributes(
       const std::string& dir, std::vector<FileAttributes>* result) override {
     Status status = EnvWrapper::GetChildrenFileAttributes(dir, result);
     if (status.ok()) {
@@ -62,11 +62,9 @@ class EnvBasicTestWithParam : public testing::Test,
     test_dir_ = test::PerThreadDBPath(env_, "env_basic_test");
   }
 
-  void SetUp() {
-    env_->CreateDirIfMissing(test_dir_);
-  }
+  void SetUp() override { env_->CreateDirIfMissing(test_dir_); }
 
-  void TearDown() {
+  void TearDown() override {
     std::vector<std::string> files;
     env_->GetChildren(test_dir_, &files);
     for (const auto& file : files) {
@@ -98,42 +96,18 @@ static ROT13BlockCipher encrypt_block_rot13(32);
 
 static CTREncryptionProvider encrypt_provider_ctr(encrypt_block_rot13);
 
-static std::unique_ptr<Env> encrypt_env(new NormalizingEnvWrapper(NewEncryptedEnv(
-                                                                    Env::Default(),&encrypt_provider_ctr)));
+static std::unique_ptr<Env> encrypt_env(new NormalizingEnvWrapper(
+    NewEncryptedEnv(Env::Default(), &encrypt_provider_ctr)));
 INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvBasicTestWithParam,
                         ::testing::Values(encrypt_env.get()));
 INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvMoreTestWithParam,
                         ::testing::Values(encrypt_env.get()));
 
-// next statements run env test against encrypt_2 code.
-static std::string KeyName={"A key name"};
-static Sha1Description_t KeyDesc(KeyName);
-
-// this key is from https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf,
-//  example F.5.5
-static uint8_t key256[] = {0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
-                           0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
-                           0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7,
-                           0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4};
-std::shared_ptr<EncryptionProvider> encrypt2_provider_ctr(new CTREncryptionProvider2(KeyName, key256, 32));
-
-static std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_readers={
-  {KeyDesc, encrypt2_provider_ctr}};
-static std::pair<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_writer={
-  KeyDesc, encrypt2_provider_ctr};
-
-static std::unique_ptr<Env> encrypt2_env(new NormalizingEnvWrapper(NewEncryptedEnv2(Env::Default(),
-                                                                                    encrypt_readers, encrypt_writer)));
-
-
-INSTANTIATE_TEST_CASE_P(EncryptedEnv2, EnvBasicTestWithParam,
-                        ::testing::Values(encrypt2_env.get()));
-
-
 #ifndef ROCKSDB_LITE
 static std::unique_ptr<Env> mem_env(NewMemEnv(Env::Default()));
 INSTANTIATE_TEST_CASE_P(MemEnv, EnvBasicTestWithParam,
                         ::testing::Values(mem_env.get()));
+
 namespace {
 
 // Returns a vector of 0 or 1 Env*, depending whether an Env is registered for
@@ -150,6 +124,7 @@ std::vector<Env*> GetCustomEnvs() {
     const char* uri = getenv("TEST_ENV_URI");
     if (uri != nullptr) {
       custom_env = NewCustomObject<Env>(uri, &custom_env_guard);
+//      Env::LoadEnv(uri, &custom_env);
     }
   }
 
