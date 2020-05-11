@@ -12,11 +12,7 @@
 #include <cctype>
 #include <iostream>
 
-#include "openssl/rand.h"
-#include "openssl/aes.h"
-
-#include "rocksdb/env_encrypt_2.h"
-#include "util/aligned_buffer.h"
+#include "rocksdb/env_encrypt2.h"
 #include "util/coding.h"
 #include "util/random.h"
 

@@ -19,7 +19,7 @@ PLATFORM_HDRS = select({
 COMMON_SRCS = [
     "env.cc",
     "env_encryption.cc",
-    "env_encrypt_2.cc",
+    "env_encrypt2.cc",
 ]
 
 PLATFORM_SRCS = select({
@@ -102,8 +102,8 @@ constrained_test(
 )
 
 constrained_test(
-    name = "env_encrypt_2_test",
-    srcs = ["env_encrypt_2_test.cc"],
+    name = "env_encrypt2_test",
+    srcs = ["env_encrypt2_test.cc"],
     deps = [
         ":env",
         ":test_utils",
