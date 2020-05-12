@@ -228,6 +228,7 @@ cpp_library(
         "util/filter_policy.cc",
         "util/hash.cc",
         "util/jemalloc_nodump_allocator.cc",
+        "util/library_loader.cc",
         "util/log_buffer.cc",
         "util/murmurhash.cc",
         "util/random.cc",
@@ -816,6 +817,11 @@ ROCKS_TESTS = [
     [
         "ldb_cmd_test",
         "tools/ldb_cmd_test.cc",
+        "serial",
+    ],
+    [
+        "library_loader_test",
+        "util/library_loader_test.cc",
         "serial",
     ],
     [

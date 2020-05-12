@@ -377,6 +377,14 @@ constrained_test(
 )
 
 constrained_test(
+    name = "library_loader_test",
+    srcs = ["library_loader_test.cc"],
+    deps = [
+        ":test_utils",
+        ":util",
+    ],
+)
+constrained_test(
     name = "rate_limiter_test",
     srcs = ["rate_limiter_test.cc"],
     deps = [

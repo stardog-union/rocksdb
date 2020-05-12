@@ -958,6 +958,7 @@ if(WITH_TESTS)
         util/hash_test.cc
         util/heap_test.cc
         util/rate_limiter_test.cc
+        util/library_loader_test.cc
         util/repeatable_thread_test.cc
         util/slice_transform_test.cc
         util/timer_queue_test.cc

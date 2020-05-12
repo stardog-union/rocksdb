@@ -147,6 +147,7 @@ LIB_SOURCES =                                                   \
   util/filter_policy.cc                                         \
   util/hash.cc                                                  \
   util/jemalloc_nodump_allocator.cc                             \
+  util/library_loader.cc                                        \
   util/log_buffer.cc                                            \
   util/murmurhash.cc                                            \
   util/random.cc                                                \
@@ -384,6 +385,7 @@ MAIN_SOURCES =                                                          \
   util/dynamic_bloom_test.cc                                            \
   util/event_logger_test.cc                                             \
   util/filelock_test.cc                                                 \
+  util/library_loader_test.cc                                           \
   util/log_write_bench.cc                                               \
   util/rate_limiter_test.cc                                             \
   util/repeatable_thread_test.cc                                        \

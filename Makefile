@@ -422,6 +422,7 @@ TESTS = \
 	env_encrypt2_test \
 	env_test \
 	hash_test \
+	library_loader_test \
 	thread_local_test \
 	rate_limiter_test \
 	perf_context_test \
@@ -1134,6 +1135,9 @@ coding_test: util/coding_test.o $(LIBOBJECTS) $(TESTHARNESS)
 	$(AM_LINK)
 
 hash_test: util/hash_test.o $(LIBOBJECTS) $(TESTHARNESS)
+	$(AM_LINK)
+
+library_loader_test: util/library_loader_test.o $(LIBOBJECTS) $(TESTHARNESS)
 	$(AM_LINK)
 
 option_change_migration_test: utilities/option_change_migration/option_change_migration_test.o db/db_test_util.o $(LIBOBJECTS) $(TESTHARNESS)
