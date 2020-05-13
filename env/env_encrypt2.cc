@@ -100,32 +100,37 @@ Status AESBlockAccessCipherStream::EncryptBlock(uint64_t blockIndex, char *data,
   ALIGN16 AesAlignedBlock_t block_in, block_out, iv;
   int out_len=0, in_len={AES_BLOCK_SIZE}, ret_val;
 
-  std::unique_ptr<EVP_CIPHER_CTX, void(*)(EVP_CIPHER_CTX *)> context(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
+  if (EncryptedEnv2::crypto_.IsValid()) {
+    std::unique_ptr<EVP_CIPHER_CTX, void(*)(EVP_CIPHER_CTX *)>
+        context(EncryptedEnv2::crypto_.EVP_CIPHER_CTX_new(), EncryptedEnv2::crypto_.EVP_CIPHER_CTX_free_ptr());
 
-  // https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
-  memcpy(iv.bytes, nonce_, AES_BLOCK_SIZE/2);
-  EncodeFixed64((char*)&iv.bytes[AES_BLOCK_SIZE/2], blockIndex); // this will be little endian
-  block_in.nums[0] = 0;
-  block_in.nums[1] = 0;
+    // https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf
+    memcpy(iv.bytes, nonce_, AES_BLOCK_SIZE/2);
+    EncodeFixed64((char*)&iv.bytes[AES_BLOCK_SIZE/2], blockIndex); // this will be little endian
+    block_in.nums[0] = 0;
+    block_in.nums[1] = 0;
 
-  ret_val = EVP_EncryptInit_ex(context.get(), EVP_aes_256_ctr(), nullptr, key_.key, iv.bytes);
-  if (1 == ret_val) {
-    ret_val = EVP_EncryptUpdate(context.get(), block_out.bytes, &out_len, block_in.bytes, in_len);
+    ret_val = EncryptedEnv2::crypto_.EVP_EncryptInit_ex(context.get(), EncryptedEnv2::crypto_.EVP_aes_256_ctr(), nullptr, key_.key, iv.bytes);
+    if (1 == ret_val) {
+      ret_val = EncryptedEnv2::crypto_.EVP_EncryptUpdate(context.get(), block_out.bytes, &out_len, block_in.bytes, in_len);
 
-    if (1 != ret_val || AES_BLOCK_SIZE != out_len) {
-      status = Status::InvalidArgument("EVP_EncryptUpdate failed: ",
-                                       AES_BLOCK_SIZE == out_len ? "bad return value" : "output length short");
+      if (1 != ret_val || AES_BLOCK_SIZE != out_len) {
+        status = Status::InvalidArgument("EVP_EncryptUpdate failed: ",
+                                         AES_BLOCK_SIZE == out_len ? "bad return value" : "output length short");
+      }
+    } else {
+      status = Status::InvalidArgument("EVP_EncryptInit_ex failed.");
     }
-  } else {
-    status = Status::InvalidArgument("EVP_EncryptInit_ex failed.");
-  }
 
-  // XOR data with ciphertext.
-  uint64_t * data_ptr;
-  data_ptr = (uint64_t*)data;
-  *data_ptr ^= block_out.nums[0];
-  data_ptr = (uint64_t*)(data+8);
-  *data_ptr ^= block_out.nums[1];
+    // XOR data with ciphertext.
+    uint64_t * data_ptr;
+    data_ptr = (uint64_t*)data;
+    *data_ptr ^= block_out.nums[0];
+    data_ptr = (uint64_t*)(data+8);
+    *data_ptr ^= block_out.nums[1];
+  } else {
+    status = Status::NotSupported("libcrypto not available for encryption/decryption.");
+  }
 
   return status;
 }

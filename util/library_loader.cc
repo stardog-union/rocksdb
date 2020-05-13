@@ -76,7 +76,7 @@ UnixLibCrypto::UnixLibCrypto()
   if (is_valid_) {
     // size of map minus two since _new/_create and _free/_destroy
     //  only resolve one of the two.
-    is_valid_ = (8 == GetEntryPoints(functions_));
+    is_valid_ = ((functions_.size()-2) == GetEntryPoints(functions_));
 
     ctx_new_ = (EVP_MD_CTX_new_t) functions_["EVP_MD_CTX_new"];
     if (nullptr == ctx_new_) {
@@ -95,6 +95,13 @@ UnixLibCrypto::UnixLibCrypto()
 
     rand_bytes_ = (RAND_bytes_t) functions_["RAND_bytes"];
     rand_poll_ = (RAND_poll_t) functions_["RAND_poll"];
+
+    cipher_new_ = (EVP_CIPHER_CTX_new_t) functions_["EVP_CIPHER_CTX_new"];
+    cipher_free_ = (EVP_CIPHER_CTX_free_t) functions_["EVP_CIPHER_CTX_free"];
+    encrypt_init_ = (EVP_EncryptInit_ex_t) functions_["EVP_EncryptInit_ex"];
+    aes_256_ctr_ = (EVP_aes_256_ctr_t) functions_["EVP_aes_256_ctr"];
+    encrypt_update_ = (EVP_EncryptUpdate_t) functions_["EVP_EncryptUpdate"];
+
   }
 }
 
