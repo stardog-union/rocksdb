@@ -33,7 +33,7 @@ namespace rocksdb {
 
 #ifndef ROCKSDB_LITE
 
-// this constructor needs to NOT be in .h file, or requires adding libcrypto in random user test suites
+UnixLibCrypto EncryptedEnv2::crypto_;
 
 Sha1Description_t::Sha1Description_t(const std::string & key_desc_str) {
   bool good={true};
@@ -41,23 +41,22 @@ Sha1Description_t::Sha1Description_t(const std::string & key_desc_str) {
   unsigned len;
 
   memset(desc, 0, EVP_MAX_MD_SIZE);
-  if (0 != key_desc_str.length()) {
-    // following not allowed because EVP_MD_CTX_destroy is a compatibility macro in ssl 1.1
-    //std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX *)> context(EVP_MD_CTX_create(), EVP_MD_CTX_destroy);
-    EVP_MD_CTX * context = EVP_MD_CTX_create();
+  if (0 != key_desc_str.length() && EncryptedEnv2::crypto_.IsValid()) {
 
-    ret_val = EVP_DigestInit_ex(context, EVP_sha1(), nullptr);
+    std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX *)> context(EncryptedEnv2::crypto_.EVP_MD_CTX_new(),
+                                                               EncryptedEnv2::crypto_.EVP_MD_CTX_free_ptr());
+
+    ret_val = EncryptedEnv2::crypto_.EVP_DigestInit_ex(context.get(), EncryptedEnv2::crypto_.EVP_sha1(), nullptr);
     good = (1 == ret_val);
     if (good) {
-      ret_val = EVP_DigestUpdate(context, key_desc_str.c_str(), key_desc_str.length());
+      ret_val = EncryptedEnv2::crypto_.EVP_DigestUpdate(context.get(), key_desc_str.c_str(), key_desc_str.length());
       good = (1 == ret_val);
     }
 
     if (good) {
-      ret_val = EVP_DigestFinal_ex(context, desc, &len);
+      ret_val = EncryptedEnv2::crypto_.EVP_DigestFinal_ex(context.get(), desc, &len);
       good = (1 == ret_val);
     }
-    EVP_MD_CTX_destroy(context);
   } else {
     good = false;
   }
@@ -138,17 +137,21 @@ Status AESBlockAccessCipherStream::DecryptBlock(uint64_t blockIndex, char *data,
 
 Status CTREncryptionProvider2::CreateNewPrefix(const std::string& /*fname*/, char *prefix, size_t prefixLength) {
   Status s;
-  if (sizeof(Prefix0_t)<=prefixLength) {
-    int ret_val;
+  if (EncryptedEnv2::crypto_.IsValid()) {
+    if (sizeof(Prefix0_t)<=prefixLength) {
+      int ret_val;
 
-    Prefix0_t * pf={(Prefix0_t *)prefix};
-    memcpy(pf->key_description_,key_desc_.desc, sizeof(key_desc_.desc));
-    ret_val = RAND_bytes((unsigned char *)&pf->nonce_, AES_BLOCK_SIZE/2);  //RAND_poll() to initialize
-    if (1 != ret_val) {
-      s = Status::NotSupported("RAND_bytes failed");
+      Prefix0_t * pf={(Prefix0_t *)prefix};
+      memcpy(pf->key_description_,key_desc_.desc, sizeof(key_desc_.desc));
+      ret_val = EncryptedEnv2::crypto_.RAND_bytes((unsigned char *)&pf->nonce_, AES_BLOCK_SIZE/2);  //RAND_poll() to initialize
+      if (1 != ret_val) {
+        s = Status::NotSupported("RAND_bytes failed");
+      }
+    } else {
+      s = Status::NotSupported("Prefix size needs to be 28 or more");
     }
   } else {
-    s = Status::NotSupported("Prefix size needs to be 28 or more");
+    s = Status::NotSupported("RAND_bytes() from libcrypto not available.");
   }
 
   return s;
@@ -160,19 +163,33 @@ Status CTREncryptionProvider2::CreateNewPrefix(const std::string& /*fname*/, cha
 Env* NewEncryptedEnv2(Env* base_env,
                       std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
                       std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write) {
-  return new EncryptedEnv2(base_env, encrypt_read, encrypt_write);
+  Env * ret_env{base_env};
+  EncryptedEnv2 * new_env{nullptr};
+
+  if (nullptr != base_env) {
+    new_env = new EncryptedEnv2(base_env, encrypt_read, encrypt_write);
+
+    if (new_env->IsValid()) {
+      ret_env = new_env;
+    }
+  }
+  return ret_env;
 }
 
 EncryptedEnv2::EncryptedEnv2(Env* base_env,
                              std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
                              std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write)
-  : EnvWrapper(base_env), encrypt_read_(encrypt_read), encrypt_write_(encrypt_write) {
-  RAND_poll();
+    : EnvWrapper(base_env), encrypt_read_(encrypt_read), encrypt_write_(encrypt_write), valid_(false) {
+  valid_ = crypto_.IsValid();
+
+  if (IsValid()) {
+    crypto_.RAND_poll();
+  }
 }
 
 
-  // NewSequentialFile opens a file for sequential reading.
-  Status EncryptedEnv2::NewSequentialFile(const std::string& fname,
+// NewSequentialFile opens a file for sequential reading.
+Status EncryptedEnv2::NewSequentialFile(const std::string& fname,
                                    std::unique_ptr<SequentialFile>* result,
                                    const EnvOptions& options) {
     result->reset();

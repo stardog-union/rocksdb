@@ -20,6 +20,7 @@
 #include "rocksdb/env_encryption.h"
 #include "util/aligned_buffer.h"
 #include "util/coding.h"
+#include "util/library_loader.h"
 #include "util/random.h"
 
 #endif
@@ -406,11 +407,16 @@ class EncryptedEnv2 : public EnvWrapper {
     return status;
   }
 
+  bool IsValid() const {return valid_;}
+
+  static UnixLibCrypto crypto_;
 
 protected:
 
   std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read_;
   std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write_;
+
+  bool valid_;
 };
 
 

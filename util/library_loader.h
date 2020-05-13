@@ -5,7 +5,9 @@
 
 #pragma once
 
+#include <map>
 #include <string>
+#include <openssl/evp.h>
 
 namespace rocksdb {
 
@@ -36,9 +38,84 @@ class UnixLibraryLoader : public LibraryLoader {
 
   virtual void * GetEntryPoint(const char * function_name) override;
 
+  virtual size_t GetEntryPoints(std::map<std::string, void *> & functions);
+
 protected:
   void * dl_handle_;
   std::string last_error_msg_;
+};
+
+
+class UnixLibCrypto : public UnixLibraryLoader {
+public:
+  UnixLibCrypto();
+  virtual ~UnixLibCrypto() = default;
+
+  // _new & _free are ssl 1.1, replacing 1.0 _create & _destroy
+  using EVP_MD_CTX_new_t = EVP_MD_CTX * (*)(void);
+  using EVP_DigestInit_ex_t = int (*)(EVP_MD_CTX *ctx, const EVP_MD *type, ENGINE *impl);
+  using EVP_sha1_t = const EVP_MD * (*)(void);
+  using EVP_DigestUpdate_t = int (*)(EVP_MD_CTX *ctx, const void *d, size_t cnt);
+  using EVP_DigestFinal_ex_t = int (*)(EVP_MD_CTX *ctx, unsigned char *md, unsigned int *s);
+  using EVP_MD_CTX_free_t = void (*)(EVP_MD_CTX *ctx);
+  using RAND_bytes_t = int (*)(unsigned char *buf, int num);
+  using RAND_poll_t = int (*)();
+
+  EVP_MD_CTX * EVP_MD_CTX_new() const {return ctx_new_();};
+
+  int EVP_DigestInit_ex(EVP_MD_CTX *ctx, const EVP_MD *type, ENGINE *impl) {
+    return digest_init_(ctx, type, impl);
+  }
+
+  const EVP_MD * EVP_sha1() {return sha1_();}
+
+  int EVP_DigestUpdate(EVP_MD_CTX *ctx, const void *d, size_t cnt) {
+    return digest_update_(ctx, d, cnt);
+  }
+
+  int EVP_DigestFinal_ex(EVP_MD_CTX *ctx, unsigned char *md, unsigned int *s) {
+    return digest_final_(ctx, md, s);
+  }
+
+  void EVP_MD_CTX_free(EVP_MD_CTX *ctx) {
+    ctx_free_(ctx);
+  }
+
+  EVP_MD_CTX_free_t EVP_MD_CTX_free_ptr() {
+    return ctx_free_;
+  }
+
+  int RAND_bytes(unsigned char *buf, int num) {
+    return rand_bytes_(buf, num);
+  }
+
+  int RAND_poll() {
+    return rand_poll_();
+  }
+
+protected:
+  std::map<std::string, void *> functions_ {
+    {"EVP_MD_CTX_new", nullptr}, {"EVP_MD_CTX_create", nullptr},
+    {"EVP_DigestInit_ex", nullptr},
+    {"EVP_sha1", nullptr},
+    {"EVP_DigestUpdate", nullptr},
+    {"EVP_DigestFinal_ex", nullptr},
+    {"EVP_MD_CTX_free", nullptr}, {"EVP_MD_CTX_destroy", nullptr},
+
+    {"RAND_bytes", nullptr},
+    {"RAND_poll", nullptr},
+  };
+
+  EVP_MD_CTX_new_t ctx_new_;
+  EVP_DigestInit_ex_t digest_init_;
+  EVP_sha1_t sha1_;
+  EVP_DigestUpdate_t digest_update_;
+  EVP_DigestFinal_ex_t digest_final_;
+  EVP_MD_CTX_free_t ctx_free_;
+
+  RAND_bytes_t rand_bytes_;
+  RAND_poll_t rand_poll_;
+
 };
 
 }  // namespace rocksdb

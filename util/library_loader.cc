@@ -52,4 +52,50 @@ void * UnixLibraryLoader::GetEntryPoint(const char * function_name) {
   return ret_ptr;
 }
 
+
+size_t UnixLibraryLoader::GetEntryPoints(std::map<std::string, void *> & functions) {
+  size_t num_found {0};
+
+  if (is_valid_) {
+    for (auto& func : functions) {
+      void * tmp_ptr;
+
+      tmp_ptr = GetEntryPoint(func.first.c_str());
+      if (nullptr != tmp_ptr) {
+        ++num_found;
+        func.second = tmp_ptr;
+      }
+    }
+  }
+
+  return num_found;
+}
+
+UnixLibCrypto::UnixLibCrypto()
+    : UnixLibraryLoader("libcrypto.so") {
+  if (is_valid_) {
+    // size of map minus two since _new/_create and _free/_destroy
+    //  only resolve one of the two.
+    is_valid_ = (8 == GetEntryPoints(functions_));
+
+    ctx_new_ = (EVP_MD_CTX_new_t) functions_["EVP_MD_CTX_new"];
+    if (nullptr == ctx_new_) {
+      ctx_new_ = (EVP_MD_CTX_new_t) functions_["EVP_MD_CTX_create"];
+    }
+
+    digest_init_ = (EVP_DigestInit_ex_t) functions_["EVP_DigestInit_ex"];
+    sha1_ = (EVP_sha1_t) functions_["EVP_sha1"];
+    digest_update_ = (EVP_DigestUpdate_t) functions_["EVP_DigestUpdate"];
+    digest_final_ = (EVP_DigestFinal_ex_t) functions_["EVP_DigestFinal_ex"];
+
+    ctx_free_ = (EVP_MD_CTX_free_t) functions_["EVP_MD_CTX_free"];
+    if (nullptr == ctx_free_) {
+      ctx_free_ = (EVP_MD_CTX_free_t) functions_["EVP_MD_CTX_destroy"];
+    }
+
+    rand_bytes_ = (RAND_bytes_t) functions_["RAND_bytes"];
+    rand_poll_ = (RAND_poll_t) functions_["RAND_poll"];
+  }
+}
+
 } // namespace rocksdb
