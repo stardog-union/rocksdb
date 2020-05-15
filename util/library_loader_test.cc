@@ -9,11 +9,23 @@
 
 namespace rocksdb {
 
+#ifdef OS_MACOSX
+    static const char * LIB_M_NAME = "libm.dylib";
+    static const char * LIB_BAD_NAME = "libbubbagump.dylib";
+    static const char * LIB_SSL_NAME = "libssl.dylib";
+#else
+    static const char * LIB_M_NAME = "libm.so.6";
+    static const char * LIB_BAD_NAME = "libbubbagump.so";
+    static const char * LIB_SSL_NAME = "libssl.so";
+#endif
+    
+
 class UnixLibraryLoaderTest {};
 
 TEST(UnixLibraryLoaderTest, Simple) {
-  UnixLibraryLoader works("libm.so.6");
-  UnixLibraryLoader fails("libbubbagump.so");
+
+  UnixLibraryLoader works(LIB_M_NAME);
+  UnixLibraryLoader fails(LIB_BAD_NAME);
 
   ASSERT_TRUE(works.IsValid());
   ASSERT_FALSE(fails.IsValid());
@@ -27,8 +39,8 @@ TEST(UnixLibraryLoaderTest, Simple) {
 }
 
 TEST(UnixLibraryLoaderTest, SSL) {
-  UnixLibraryLoader ssl("libssl.so");
-  UnixLibraryLoader crypto("libcrypto.so");
+  UnixLibraryLoader ssl(LIB_SSL_NAME);
+  UnixLibraryLoader crypto(UnixLibCrypto::crypto_lib_name_);
 
   ASSERT_TRUE(ssl.IsValid());
   ASSERT_TRUE(crypto.IsValid());
@@ -47,7 +59,7 @@ TEST(UnixLibraryLoaderTest, Crypto) {
   context = crypto.EVP_MD_CTX_create();
   ASSERT_TRUE(nullptr != context);
 
-  ret_val = crypto.EVP_DigestInit_ex(context, EVP_sha1(), nullptr);
+  ret_val = crypto.EVP_DigestInit_ex(context, crypto.EVP_sha1(), nullptr);
   ASSERT_TRUE(1 == ret_val);
 
   ret_val = crypto.EVP_DigestUpdate(context, "1", 1);

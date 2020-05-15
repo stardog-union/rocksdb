@@ -126,6 +126,8 @@ public:
     return encrypt_update_(ctx, out, outl, in, inl);
   }
 
+  static const char * crypto_lib_name_;
+  
 protected:
   std::map<std::string, void *> functions_ {
     {"EVP_MD_CTX_new", nullptr}, {"EVP_MD_CTX_create", nullptr},

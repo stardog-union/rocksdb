@@ -11,6 +11,12 @@
 
 namespace rocksdb {
 
+#ifdef OS_MACOSX
+    const char * UnixLibCrypto::crypto_lib_name_ = "libcrypto.dylib";
+#else
+    const char * UnixLibCrypto::crypto_lib_name_ = "libcrypto.so";
+#endif
+    
 UnixLibraryLoader::UnixLibraryLoader(const char * library_name)
     : dl_handle_(nullptr) {
 
@@ -72,7 +78,7 @@ size_t UnixLibraryLoader::GetEntryPoints(std::map<std::string, void *> & functio
 }
 
 UnixLibCrypto::UnixLibCrypto()
-    : UnixLibraryLoader("libcrypto.so") {
+    : UnixLibraryLoader(crypto_lib_name_) {
   if (is_valid_) {
     // size of map minus two since _new/_create and _free/_destroy
     //  only resolve one of the two.
