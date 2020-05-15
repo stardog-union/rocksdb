@@ -8,6 +8,7 @@
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
 #include "db/version_builder.h"
+#include "port/stack_trace.h"
 
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
@@ -167,6 +168,7 @@ class VersionBuilder::Rep {
             SequenceNumber external_file_seqno = f2->fd.smallest_seqno;
             if (!(external_file_seqno < f1->fd.largest_seqno ||
                   external_file_seqno == 0)) {
+              rocksdb::port::PrintStack();
               fprintf(stderr,
                       "L0 file with seqno %" PRIu64 " %" PRIu64
                       " vs. file with global_seqno %" PRIu64 "\n",
@@ -175,6 +177,7 @@ class VersionBuilder::Rep {
               abort();
             }
           } else if (f1->fd.smallest_seqno <= f2->fd.smallest_seqno) {
+            rocksdb::port::PrintStack();
             fprintf(stderr,
                     "L0 files seqno %" PRIu64 " %" PRIu64 " vs. %" PRIu64
                     " %" PRIu64 "\n",

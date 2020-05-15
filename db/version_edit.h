@@ -9,12 +9,14 @@
 
 #pragma once
 #include <algorithm>
+#include <iostream>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
-#include <string>
-#include "rocksdb/cache.h"
 #include "db/dbformat.h"
+#include "port/stack_trace.h"
+#include "rocksdb/cache.h"
 #include "util/arena.h"
 #include "util/autovector.h"
 
@@ -35,7 +37,7 @@ struct FileDescriptor {
   // Table reader in table_reader_handle
   TableReader* table_reader;
   uint64_t packed_number_and_path_id;
-  uint64_t file_size;  // File size in bytes
+  uint64_t file_size;             // File size in bytes
   SequenceNumber smallest_seqno;  // The smallest seqno in this file
   SequenceNumber largest_seqno;   // The largest seqno in this file
 
@@ -65,8 +67,8 @@ struct FileDescriptor {
     return packed_number_and_path_id & kFileNumberMask;
   }
   uint32_t GetPathId() const {
-    return static_cast<uint32_t>(
-        packed_number_and_path_id / (kFileNumberMask + 1));
+    return static_cast<uint32_t>(packed_number_and_path_id /
+                                 (kFileNumberMask + 1));
   }
   uint64_t GetFileSize() const { return file_size; }
 };
@@ -85,8 +87,8 @@ struct FileSampledStats {
 
 struct FileMetaData {
   FileDescriptor fd;
-  InternalKey smallest;            // Smallest internal key served by table
-  InternalKey largest;             // Largest internal key served by table
+  InternalKey smallest;  // Smallest internal key served by table
+  InternalKey largest;   // Largest internal key served by table
 
   // Needs to be disposed when refs becomes 0.
   Cache::Handle* table_reader_handle;
@@ -101,16 +103,16 @@ struct FileMetaData {
   uint64_t compensated_file_size;
   // These values can mutate, but they can only be read or written from
   // single-threaded LogAndApply thread
-  uint64_t num_entries;            // the number of entries.
-  uint64_t num_deletions;          // the number of deletion entries.
-  uint64_t raw_key_size;           // total uncompressed key size.
-  uint64_t raw_value_size;         // total uncompressed value size.
+  uint64_t num_entries;     // the number of entries.
+  uint64_t num_deletions;   // the number of deletion entries.
+  uint64_t raw_key_size;    // total uncompressed key size.
+  uint64_t raw_value_size;  // total uncompressed value size.
 
   int refs;  // Reference count
 
-  bool being_compacted;        // Is this file undergoing compaction?
-  bool init_stats_from_file;   // true if the data-entry stats of this file
-                               // has initialized from file.
+  bool being_compacted;       // Is this file undergoing compaction?
+  bool init_stats_from_file;  // true if the data-entry stats of this file
+                              // has initialized from file.
 
   bool marked_for_compaction;  // True if client asked us nicely to compact this
                                // file.
@@ -160,15 +162,11 @@ struct FileMetaData {
 struct FdWithKeyRange {
   FileDescriptor fd;
   FileMetaData* file_metadata;  // Point to all metadata
-  Slice smallest_key;    // slice that contain smallest key
-  Slice largest_key;     // slice that contain largest key
+  Slice smallest_key;           // slice that contain smallest key
+  Slice largest_key;            // slice that contain largest key
 
   FdWithKeyRange()
-      : fd(),
-        file_metadata(nullptr),
-        smallest_key(),
-        largest_key() {
-  }
+      : fd(), file_metadata(nullptr), smallest_key(), largest_key() {}
 
   FdWithKeyRange(FileDescriptor _fd, Slice _smallest_key, Slice _largest_key,
                  FileMetaData* _file_metadata)
@@ -192,7 +190,7 @@ struct LevelFilesBrief {
 class VersionEdit {
  public:
   VersionEdit() { Clear(); }
-  ~VersionEdit() { }
+  ~VersionEdit() {}
 
   void Clear();
 
@@ -238,6 +236,10 @@ class VersionEdit {
                const SequenceNumber& largest_seqno,
                bool marked_for_compaction) {
     assert(smallest_seqno <= largest_seqno);
+    std::cout << " smallest_seqno=" << smallest_seqno
+              << " largest_seqno=" << largest_seqno << std::endl;
+    rocksdb::port::PrintStack();
+
     FileMetaData f;
     f.fd = FileDescriptor(file, file_path_id, file_size, smallest_seqno,
                           largest_seqno);
