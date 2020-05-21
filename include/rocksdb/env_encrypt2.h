@@ -197,9 +197,11 @@ protected:
 
 class EncryptedEnv2 : public EnvWrapper {
  public:
-  EncryptedEnv2(Env* base_env,
-                std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
-                std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
+  using WriteKey_t = std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>>;
+  using ReadKeys_t = std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>>;
+
+
+  EncryptedEnv2(Env* base_env, ReadKeys_t encrypt_read, WriteKey_t encrypt_write);
 
   bool IsWriteEncrypted() const {return nullptr!=encrypt_write_.second;}
 
@@ -424,8 +426,8 @@ protected:
 // Returns an Env that encrypts data when stored on disk and decrypts data when
 // read from disk.
 Env* NewEncryptedEnv2(Env* base_env,
-                      std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
-                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write);
+                      EncryptedEnv2::ReadKeys_t encrypt_read,
+                      EncryptedEnv2::WriteKey_t encrypt_write);
 
 
 #endif // ROCKSDB_LITE

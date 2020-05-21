@@ -166,8 +166,8 @@ Status CTREncryptionProvider2::CreateNewPrefix(const std::string& /*fname*/, cha
 // Returns an Env that encrypts data when stored on disk and decrypts data when
 // read from disk.
 Env* NewEncryptedEnv2(Env* base_env,
-                      std::map<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_read,
-                      std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write) {
+                      EncryptedEnv2::ReadKeys_t encrypt_read,
+                      EncryptedEnv2::WriteKey_t encrypt_write) {
   Env * ret_env{base_env};
   EncryptedEnv2 * new_env{nullptr};
 
@@ -182,8 +182,8 @@ Env* NewEncryptedEnv2(Env* base_env,
 }
 
 EncryptedEnv2::EncryptedEnv2(Env* base_env,
-                             std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>> encrypt_read,
-                             std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>> encrypt_write)
+                             EncryptedEnv2::ReadKeys_t encrypt_read,
+                             EncryptedEnv2::WriteKey_t encrypt_write)
     : EnvWrapper(base_env), encrypt_read_(encrypt_read), encrypt_write_(encrypt_write), valid_(false) {
   valid_ = crypto_.IsValid();
 
