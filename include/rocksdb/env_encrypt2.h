@@ -1,4 +1,4 @@
-//  Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
+//  copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
 //  This source code is licensed under both the GPLv2 (found in the
 //  COPYING file in the root directory) and Apache 2.0 License
 //  (found in the LICENSE.Apache file in the root directory).
@@ -200,8 +200,14 @@ class EncryptedEnv2 : public EnvWrapper {
   using WriteKey_t = std::pair<Sha1Description_t,std::shared_ptr<EncryptionProvider>>;
   using ReadKeys_t = std::map<Sha1Description_t, std::shared_ptr<EncryptionProvider>>;
 
+  static Env * Default();
+  static Env * Default(ReadKeys_t encrypt_read, WriteKey_t encrypt_write);
+
+  EncryptedEnv2(Env* base_env);
 
   EncryptedEnv2(Env* base_env, ReadKeys_t encrypt_read, WriteKey_t encrypt_write);
+
+  void SetKeys(ReadKeys_t encrypt_read, WriteKey_t encrypt_write);
 
   bool IsWriteEncrypted() const {return nullptr!=encrypt_write_.second;}
 
@@ -424,11 +430,10 @@ protected:
 
 
 // Returns an Env that encrypts data when stored on disk and decrypts data when
-// read from disk.
+// read from disk.  Prefer EncryptedEnv2::Default().
 Env* NewEncryptedEnv2(Env* base_env,
                       EncryptedEnv2::ReadKeys_t encrypt_read,
                       EncryptedEnv2::WriteKey_t encrypt_write);
-
 
 #endif // ROCKSDB_LITE
 

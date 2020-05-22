@@ -33,8 +33,6 @@ namespace rocksdb {
 
 #ifndef ROCKSDB_LITE
 
-UnixLibCrypto EncryptedEnv2::crypto_;
-
 Sha1Description_t::Sha1Description_t(const std::string & key_desc_str) {
   bool good={true};
   int ret_val;
@@ -171,20 +169,46 @@ Env* NewEncryptedEnv2(Env* base_env,
   Env * ret_env{base_env};
   EncryptedEnv2 * new_env{nullptr};
 
-  if (nullptr != base_env) {
+  if (Env::Default() == base_env) {
+    // use safer static construction so libcrypto is synchronously loaded
+    new_env = (EncryptedEnv2 *)EncryptedEnv2::Default(encrypt_read, encrypt_write);
+  } else if (nullptr != base_env) {
     new_env = new EncryptedEnv2(base_env, encrypt_read, encrypt_write);
-
-    if (new_env->IsValid()) {
-      ret_env = new_env;
-    }
   }
+
+  // warning, dynamic loading of libcrypto could be delayed ... making this false
+  if (nullptr != new_env && new_env->IsValid()) {
+    ret_env = new_env;
+  }
+
   return ret_env;
 }
+
 
 EncryptedEnv2::EncryptedEnv2(Env* base_env,
                              EncryptedEnv2::ReadKeys_t encrypt_read,
                              EncryptedEnv2::WriteKey_t encrypt_write)
     : EnvWrapper(base_env), encrypt_read_(encrypt_read), encrypt_write_(encrypt_write), valid_(false) {
+  valid_ = crypto_.IsValid();
+
+  // warning, dynamic loading of libcrypto could be delayed ... making this false
+  if (IsValid()) {
+    crypto_.RAND_poll();
+  }
+}
+
+EncryptedEnv2::EncryptedEnv2(Env* base_env)
+    : EnvWrapper(base_env), valid_(false) {
+}
+
+
+void EncryptedEnv2::SetKeys(
+                             EncryptedEnv2::ReadKeys_t encrypt_read,
+                             EncryptedEnv2::WriteKey_t encrypt_write)
+{
+  encrypt_read_ = encrypt_read;
+  encrypt_write_ = encrypt_write;
+
   valid_ = crypto_.IsValid();
 
   if (IsValid()) {
@@ -491,6 +515,24 @@ Status EncryptedEnv2::NewSequentialFile(const std::string& fname,
 
     return status;
   }
+
+UnixLibCrypto EncryptedEnv2::crypto_;
+
+Env* EncryptedEnv2::Default() {
+  // the rational for this routine is to help force the static
+  //  loading of UnixLibCrypto before other routines start
+  //  using the encryption code.
+  static EncryptedEnv2 default_env(Env::Default());
+  return &default_env;
+}
+
+Env* EncryptedEnv2::Default(EncryptedEnv2::ReadKeys_t encrypt_read,
+                            EncryptedEnv2::WriteKey_t encrypt_write) {
+
+  EncryptedEnv2 * default_env = (EncryptedEnv2 *)Default();
+  default_env->SetKeys(encrypt_read, encrypt_write);
+  return default_env;
+}
 
 #endif // ROCKSDB_LITE
 

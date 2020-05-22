@@ -4,6 +4,9 @@
 
 #include "rocksdb/env_encrypt2.h"
 
+#include "rocksdb/options.h"
+#include "rocksdb/sst_file_writer.h"
+
 #include "util/testharness.h"
 
 #ifdef ROCKSDB_OPENSSL_AES_CTR
@@ -387,7 +390,7 @@ class EnvBasicTestWithParam : public testing::Test,
   std::string test_dir_;
 
   EnvBasicTestWithParam() : env_(GetParam()) {
-    test_dir_ = test::PerThreadDBPath(env_, "env_basic_test");
+    test_dir_ = test::PerThreadDBPath(env_, "env_encrypt2_test");
   }
 
   void SetUp() {
@@ -426,8 +429,7 @@ std::shared_ptr<EncryptionProvider> encrypt2_provider_ctr(new CTREncryptionProvi
 static EncryptedEnv2::ReadKeys_t encrypt_readers={{KeyDesc, encrypt2_provider_ctr}};
 static EncryptedEnv2::WriteKey_t encrypt_writer={KeyDesc, encrypt2_provider_ctr};
 
-static std::unique_ptr<Env> encrypt2_env(new NormalizingEnvWrapper(NewEncryptedEnv2(Env::Default(),
-                                                                                    encrypt_readers, encrypt_writer)));
+static std::unique_ptr<Env> encrypt2_env(new NormalizingEnvWrapper(EncryptedEnv2::Default(encrypt_readers, encrypt_writer)));
 
 
 INSTANTIATE_TEST_CASE_P(EncryptedEnv2, EnvBasicTestWithParam,
@@ -650,6 +652,52 @@ TEST_P(EnvMoreTestWithParam, GetChildren) {
   ASSERT_TRUE(!env_->GetChildren(test_dir_ + "/file", &children).ok());
   ASSERT_EQ(0U, children.size());
 }
+
+
+class SstWriterBug : public testing::Test {
+ public:
+  std::string test_dir_;
+  Env * env_default_ = Env::Default();
+
+  SstWriterBug() {
+    test_dir_ = test::PerThreadDBPath(env_default_, "env_encrypt2_test");
+  }
+
+  void SetUp() {
+    env_default_->CreateDirIfMissing(test_dir_);
+  }
+
+  void TearDown() {
+    std::vector<std::string> files;
+    env_default_->GetChildren(test_dir_, &files);
+    for (const auto& file : files) {
+      // don't know whether it's file or directory, try both. The tests must
+      // only create files or empty directories, so one must succeed, else the
+      // directory's corrupted.
+      Status s = env_default_->DeleteFile(test_dir_ + "/" + file);
+      if (!s.ok()) {
+        ASSERT_OK(env_default_->DeleteDir(test_dir_ + "/" + file));
+      }
+    }
+  }
+};
+
+#if 0
+TEST(SstWriterBug, BugCheck) {
+
+  Options sstOptions;
+
+  sstOptions.env = encrypt2_env.get();
+
+  //  auto* cf = reinterpret_cast<rocksdb::ColumnFamilyHandle*>(theCfHandle);
+  rocksdb::ColumnFamilyHandle * cf = nullptr;
+  // sstOptions.compression = (CompressionType)theCompression;
+  auto* sst_file_writer = new rocksdb::SstFileWriter(EnvOptions(), sstOptions, sstOptions.comparator, cf);
+  std::string path = test::PerThreadDBPath("BugCheck1");
+  Status ss = sst_file_writer->Open(path);
+  ASSERT_OK(ss);
+}
+#endif
 
 }  // namespace rocksdb
 
