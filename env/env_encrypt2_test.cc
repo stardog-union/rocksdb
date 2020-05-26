@@ -6,7 +6,6 @@
 
 #include "rocksdb/options.h"
 #include "rocksdb/sst_file_writer.h"
-
 #include "util/testharness.h"
 
 #ifdef ROCKSDB_OPENSSL_AES_CTR
@@ -19,7 +18,7 @@ TEST(EnvEncrypt2_Sha1, Default) {
   Sha1Description_t desc;
 
   ASSERT_FALSE(desc.IsValid());
-  for (size_t idx=0; idx<sizeof(desc.desc); ++idx) {
+  for (size_t idx = 0; idx < sizeof(desc.desc); ++idx) {
     ASSERT_TRUE('\0' == desc.desc[idx]);
   }
 }
@@ -31,8 +30,8 @@ TEST(EnvEncrypt2_Sha1, Constructors) {
   ASSERT_TRUE(64 == sizeof(desc.desc));
 
   uint8_t bytes[128], *ptr;
-  for (size_t idx=0; idx<sizeof(bytes); ++idx) {
-    bytes[idx] = idx+1;
+  for (size_t idx = 0; idx < sizeof(bytes); ++idx) {
+    bytes[idx] = idx + 1;
   }
 
   Sha1Description_t desc_bad1(bytes, 128);
@@ -43,53 +42,50 @@ TEST(EnvEncrypt2_Sha1, Constructors) {
 
   Sha1Description_t desc_good1(bytes, 64);
   ASSERT_TRUE(desc_good1.IsValid());
-  ptr = (uint8_t *)memchr(desc_good1.desc, 0, 64);
+  ptr = (uint8_t*)memchr(desc_good1.desc, 0, 64);
   ASSERT_TRUE(nullptr == ptr);
 
   Sha1Description_t desc_good2(bytes, 63);
   ASSERT_TRUE(desc_good2.IsValid());
-  ptr = (uint8_t *)memchr(desc_good2.desc, 0, 64);
+  ptr = (uint8_t*)memchr(desc_good2.desc, 0, 64);
   ASSERT_TRUE(&desc_good2.desc[63] == ptr);
 
   Sha1Description_t desc_good3(bytes, 1);
   ASSERT_TRUE(desc_good3.IsValid());
-  ptr = (uint8_t *)memchr(desc_good3.desc, 0, 64);
+  ptr = (uint8_t*)memchr(desc_good3.desc, 0, 64);
   ASSERT_TRUE(&desc_good3.desc[1] == ptr);
 
   Sha1Description_t desc_good4(bytes, 0);
   ASSERT_TRUE(desc_good4.IsValid());
-  ptr = (uint8_t *)memchr(desc_good4.desc, 0, 64);
+  ptr = (uint8_t*)memchr(desc_good4.desc, 0, 64);
   ASSERT_TRUE(&desc_good4.desc[0] == ptr);
 
   Sha1Description_t desc_str1("");
   ASSERT_FALSE(desc_str1.IsValid());
 
-  uint8_t md2[] = {0x35, 0x6a, 0x19, 0x2b, 0x79, 0x13, 0xb0, 0x4c,
-                   0x54, 0x57, 0x4d, 0x18, 0xc2, 0x8d, 0x46, 0xe6,
-                   0x39, 0x54, 0x28, 0xab};
+  uint8_t md2[] = {0x35, 0x6a, 0x19, 0x2b, 0x79, 0x13, 0xb0, 0x4c, 0x54, 0x57,
+                   0x4d, 0x18, 0xc2, 0x8d, 0x46, 0xe6, 0x39, 0x54, 0x28, 0xab};
   Sha1Description_t desc_str2("1");
   ASSERT_TRUE(desc_str2.IsValid());
   ASSERT_TRUE(0 == memcmp(md2, desc_str2.desc, sizeof(md2)));
-  for (size_t idx=sizeof(md2); idx<sizeof(desc_str2.desc); ++idx) {
-    ASSERT_TRUE( 0 == desc_str2.desc[idx]);
+  for (size_t idx = sizeof(md2); idx < sizeof(desc_str2.desc); ++idx) {
+    ASSERT_TRUE(0 == desc_str2.desc[idx]);
   }
 
-  uint8_t md3[] = {0x7b, 0x52, 0x00, 0x9b, 0x64, 0xfd, 0x0a, 0x2a,
-                   0x49, 0xe6, 0xd8, 0xa9, 0x39, 0x75, 0x30, 0x77,
-                   0x79, 0x2b, 0x05, 0x54};
+  uint8_t md3[] = {0x7b, 0x52, 0x00, 0x9b, 0x64, 0xfd, 0x0a, 0x2a, 0x49, 0xe6,
+                   0xd8, 0xa9, 0x39, 0x75, 0x30, 0x77, 0x79, 0x2b, 0x05, 0x54};
   Sha1Description_t desc_str3("12");
   ASSERT_TRUE(desc_str3.IsValid());
   ASSERT_TRUE(0 == memcmp(md3, desc_str3.desc, sizeof(md3)));
-  for (size_t idx=sizeof(md3); idx<sizeof(desc_str3.desc); ++idx) {
-    ASSERT_TRUE( 0 == desc_str3.desc[idx]);
+  for (size_t idx = sizeof(md3); idx < sizeof(desc_str3.desc); ++idx) {
+    ASSERT_TRUE(0 == desc_str3.desc[idx]);
   }
 }
 
 TEST(EnvEncrypt2_Sha1, Copy) {
   // assignment
-  uint8_t md1[] = {0xdb, 0x8a, 0xc1, 0xc2, 0x59, 0xeb, 0x89, 0xd4,
-                   0xa1, 0x31, 0xb2, 0x53, 0xba, 0xcf, 0xca, 0x5f,
-                   0x31, 0x9d, 0x54, 0xf2};
+  uint8_t md1[] = {0xdb, 0x8a, 0xc1, 0xc2, 0x59, 0xeb, 0x89, 0xd4, 0xa1, 0x31,
+                   0xb2, 0x53, 0xba, 0xcf, 0xca, 0x5f, 0x31, 0x9d, 0x54, 0xf2};
   Sha1Description_t desc1("HelloWorld"), desc2;
   ASSERT_TRUE(desc1.IsValid());
   ASSERT_FALSE(desc2.IsValid());
@@ -98,18 +94,17 @@ TEST(EnvEncrypt2_Sha1, Copy) {
   ASSERT_TRUE(desc1.IsValid());
   ASSERT_TRUE(desc2.IsValid());
   ASSERT_TRUE(0 == memcmp(md1, desc1.desc, sizeof(md1)));
-  for (size_t idx=sizeof(md1); idx<sizeof(desc1.desc); ++idx) {
-    ASSERT_TRUE( 0 == desc1.desc[idx]);
+  for (size_t idx = sizeof(md1); idx < sizeof(desc1.desc); ++idx) {
+    ASSERT_TRUE(0 == desc1.desc[idx]);
   }
   ASSERT_TRUE(0 == memcmp(md1, desc2.desc, sizeof(md1)));
-  for (size_t idx=sizeof(md1); idx<sizeof(desc2.desc); ++idx) {
-    ASSERT_TRUE( 0 == desc2.desc[idx]);
+  for (size_t idx = sizeof(md1); idx < sizeof(desc2.desc); ++idx) {
+    ASSERT_TRUE(0 == desc2.desc[idx]);
   }
 
   // copy constructor
-  uint8_t md3[] = {0x17, 0x09, 0xcc, 0x51, 0x65, 0xf5, 0x50, 0x4d,
-                   0x46, 0xde, 0x2f, 0x3a, 0x7a, 0xff, 0x57, 0x45,
-                   0x20, 0x8a, 0xed, 0x44};
+  uint8_t md3[] = {0x17, 0x09, 0xcc, 0x51, 0x65, 0xf5, 0x50, 0x4d, 0x46, 0xde,
+                   0x2f, 0x3a, 0x7a, 0xff, 0x57, 0x45, 0x20, 0x8a, 0xed, 0x44};
   Sha1Description_t desc3("A little be longer title for a key");
   ASSERT_TRUE(desc3.IsValid());
 
@@ -117,12 +112,12 @@ TEST(EnvEncrypt2_Sha1, Copy) {
   ASSERT_TRUE(desc3.IsValid());
   ASSERT_TRUE(desc4.IsValid());
   ASSERT_TRUE(0 == memcmp(md3, desc3.desc, sizeof(md3)));
-  for (size_t idx=sizeof(md3); idx<sizeof(desc3.desc); ++idx) {
-    ASSERT_TRUE( 0 == desc3.desc[idx]);
+  for (size_t idx = sizeof(md3); idx < sizeof(desc3.desc); ++idx) {
+    ASSERT_TRUE(0 == desc3.desc[idx]);
   }
   ASSERT_TRUE(0 == memcmp(md3, desc4.desc, sizeof(md3)));
-  for (size_t idx=sizeof(md3); idx<sizeof(desc4.desc); ++idx) {
-    ASSERT_TRUE( 0 == desc4.desc[idx]);
+  for (size_t idx = sizeof(md3); idx < sizeof(desc4.desc); ++idx) {
+    ASSERT_TRUE(0 == desc4.desc[idx]);
   }
 }
 
@@ -132,7 +127,7 @@ TEST(EnvEncrypt2_Key, Default) {
   AesCtrKey_t key;
 
   ASSERT_FALSE(key.IsValid());
-  for (size_t idx=0; idx<sizeof(key.key); ++idx) {
+  for (size_t idx = 0; idx < sizeof(key.key); ++idx) {
     ASSERT_TRUE('\0' == key.key[idx]);
   }
 }
@@ -144,8 +139,8 @@ TEST(EnvEncrypt2_Key, Constructors) {
   ASSERT_TRUE(64 == sizeof(key.key));
 
   uint8_t bytes[128], *ptr;
-  for (size_t idx=0; idx<sizeof(bytes); ++idx) {
-    bytes[idx] = idx+1;
+  for (size_t idx = 0; idx < sizeof(bytes); ++idx) {
+    bytes[idx] = idx + 1;
   }
 
   AesCtrKey_t key_bad1(bytes, 128);
@@ -156,22 +151,22 @@ TEST(EnvEncrypt2_Key, Constructors) {
 
   AesCtrKey_t key_good1(bytes, 64);
   ASSERT_TRUE(key_good1.IsValid());
-  ptr = (uint8_t *)memchr(key_good1.key, 0, 64);
+  ptr = (uint8_t*)memchr(key_good1.key, 0, 64);
   ASSERT_TRUE(nullptr == ptr);
 
   AesCtrKey_t key_good2(bytes, 63);
   ASSERT_TRUE(key_good2.IsValid());
-  ptr = (uint8_t *)memchr(key_good2.key, 0, 64);
+  ptr = (uint8_t*)memchr(key_good2.key, 0, 64);
   ASSERT_TRUE(&key_good2.key[63] == ptr);
 
   AesCtrKey_t key_good3(bytes, 1);
   ASSERT_TRUE(key_good3.IsValid());
-  ptr = (uint8_t *)memchr(key_good3.key, 0, 64);
+  ptr = (uint8_t*)memchr(key_good3.key, 0, 64);
   ASSERT_TRUE(&key_good3.key[1] == ptr);
 
   AesCtrKey_t key_good4(bytes, 0);
   ASSERT_TRUE(key_good4.IsValid());
-  ptr = (uint8_t *)memchr(key_good4.key, 0, 64);
+  ptr = (uint8_t*)memchr(key_good4.key, 0, 64);
   ASSERT_TRUE(&key_good4.key[0] == ptr);
 
   AesCtrKey_t key_str1("");
@@ -180,16 +175,18 @@ TEST(EnvEncrypt2_Key, Constructors) {
   AesCtrKey_t key_str2("0x35");
   ASSERT_FALSE(key_str2.IsValid());
 
-                      //1234567890123456789012345678901234567890123456789012345678901234
-  AesCtrKey_t key_str3("RandomSixtyFourCharactersLaLaLaLaJust a bunch of letters, not 0x");
+  // 1234567890123456789012345678901234567890123456789012345678901234
+  AesCtrKey_t key_str3(
+      "RandomSixtyFourCharactersLaLaLaLaJust a bunch of letters, not 0x");
   ASSERT_FALSE(key_str2.IsValid());
 
   uint8_t key4[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
                     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
                     0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
                     0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20};
-                      //1234567890123456789012345678901234567890123456789012345678901234
-  AesCtrKey_t key_str4("0102030405060708090A0B0C0D0E0F101112131415161718191a1b1c1d1e1f20");
+  // 1234567890123456789012345678901234567890123456789012345678901234
+  AesCtrKey_t key_str4(
+      "0102030405060708090A0B0C0D0E0F101112131415161718191a1b1c1d1e1f20");
   ASSERT_TRUE(key_str4.IsValid());
   ASSERT_TRUE(0 == memcmp(key4, key_str4.key, sizeof(key4)));
 }
@@ -228,11 +225,11 @@ TEST(EnvEncrypt2_Key, Copy) {
 class EnvEncrypt2_Provider {};
 
 class CipherStreamWrapper : public BlockAccessCipherStream {
-public:
-  Status TESTEncryptBlock(uint64_t blockIndex, char *data, char* scratch) {
+ public:
+  Status TESTEncryptBlock(uint64_t blockIndex, char* data, char* scratch) {
     return EncryptBlock(blockIndex, data, scratch);
   }
-  Status TESTDecryptBlock(uint64_t blockIndex, char *data, char* scratch) {
+  Status TESTDecryptBlock(uint64_t blockIndex, char* data, char* scratch) {
     return DecryptBlock(blockIndex, data, scratch);
   }
 };
@@ -265,45 +262,45 @@ TEST(EnvEncrypt2_Provider, NistExamples) {
   uint8_t cypher4[] = {0xdf, 0xc9, 0xc5, 0x8d, 0xb6, 0x7a, 0xad, 0xa6,
                        0x13, 0xc2, 0xdd, 0x08, 0x45, 0x79, 0x41, 0xa6};
 
-
   CTREncryptionProvider2 provider("NistExampleKey", key, sizeof(key));
   // only first 8 bytes of init taken in next call
-  std::unique_ptr<BlockAccessCipherStream> stream(provider.CreateCipherStream2(1, init));
+  std::unique_ptr<BlockAccessCipherStream> stream(
+      provider.CreateCipherStream2(1, init));
 
   uint64_t offset;
   uint8_t block[sizeof(plain1)];
-  uint8_t * patch = (uint8_t*)&offset; // little endian assumed
+  uint8_t* patch = (uint8_t*)&offset;  // little endian assumed
 
   //
   // forward ... encryption
   //
   memcpy((void*)&offset, (void*)&init[8], 8);
   memcpy((void*)block, (void*)plain1, 16);
-  CipherStreamWrapper * wrap = (CipherStreamWrapper *)stream.get();
+  CipherStreamWrapper* wrap = (CipherStreamWrapper*)stream.get();
 
   Status status = wrap->TESTEncryptBlock(offset, (char*)block, nullptr);
   ASSERT_TRUE(0 == memcmp(cypher1, block, sizeof(block)));
 
   memcpy((void*)&offset, (void*)&init[8], 8);
   memcpy((void*)block, (void*)plain2, 16);
-  *(patch+7) = 0x00;
-  *(patch+6) = 0xff;
+  *(patch + 7) = 0x00;
+  *(patch + 6) = 0xff;
 
   status = wrap->TESTEncryptBlock(offset, (char*)block, nullptr);
   ASSERT_TRUE(0 == memcmp(cypher2, block, sizeof(block)));
 
   memcpy((void*)&offset, (void*)&init[8], 8);
   memcpy((void*)block, (void*)plain3, 16);
-  *(patch+7) = 0x01;
-  *(patch+6) = 0xff;
+  *(patch + 7) = 0x01;
+  *(patch + 6) = 0xff;
 
   status = wrap->TESTEncryptBlock(offset, (char*)block, nullptr);
   ASSERT_TRUE(0 == memcmp(cypher3, block, sizeof(block)));
 
   memcpy((void*)&offset, (void*)&init[8], 8);
   memcpy((void*)block, (void*)plain4, 16);
-  *(patch+7) = 0x02;
-  *(patch+6) = 0xff;
+  *(patch + 7) = 0x02;
+  *(patch + 6) = 0xff;
 
   status = wrap->TESTEncryptBlock(offset, (char*)block, nullptr);
   ASSERT_TRUE(0 == memcmp(cypher4, block, sizeof(block)));
@@ -319,28 +316,27 @@ TEST(EnvEncrypt2_Provider, NistExamples) {
 
   memcpy((void*)&offset, (void*)&init[8], 8);
   memcpy((void*)block, (void*)cypher2, 16);
-  *(patch+7) = 0x00;
-  *(patch+6) = 0xff;
+  *(patch + 7) = 0x00;
+  *(patch + 6) = 0xff;
 
   status = wrap->TESTDecryptBlock(offset, (char*)block, nullptr);
   ASSERT_TRUE(0 == memcmp(plain2, block, sizeof(block)));
 
   memcpy((void*)&offset, (void*)&init[8], 8);
   memcpy((void*)block, (void*)cypher3, 16);
-  *(patch+7) = 0x01;
-  *(patch+6) = 0xff;
+  *(patch + 7) = 0x01;
+  *(patch + 6) = 0xff;
 
   status = wrap->TESTDecryptBlock(offset, (char*)block, nullptr);
   ASSERT_TRUE(0 == memcmp(plain3, block, sizeof(block)));
 
   memcpy((void*)&offset, (void*)&init[8], 8);
   memcpy((void*)block, (void*)cypher4, 16);
-  *(patch+7) = 0x02;
-  *(patch+6) = 0xff;
+  *(patch + 7) = 0x02;
+  *(patch + 6) = 0xff;
 
   status = wrap->TESTDecryptBlock(offset, (char*)block, nullptr);
   ASSERT_TRUE(0 == memcmp(plain4, block, sizeof(block)));
-
 }
 
 //
@@ -393,9 +389,7 @@ class EnvBasicTestWithParam : public testing::Test,
     test_dir_ = test::PerThreadDBPath(env_, "env_encrypt2_test");
   }
 
-  void SetUp() {
-    env_->CreateDirIfMissing(test_dir_);
-  }
+  void SetUp() { env_->CreateDirIfMissing(test_dir_); }
 
   void TearDown() {
     std::vector<std::string> files;
@@ -415,22 +409,26 @@ class EnvBasicTestWithParam : public testing::Test,
 class EnvMoreTestWithParam : public EnvBasicTestWithParam {};
 
 // next statements run env test against encrypt_2 code.
-static std::string KeyName={"A key name"};
+static std::string KeyName = {"A key name"};
 static Sha1Description_t KeyDesc(KeyName);
 
-// this key is from https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf,
+// this key is from
+// https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a.pdf,
 //  example F.5.5
 static uint8_t key256[] = {0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
                            0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81,
                            0x1f, 0x35, 0x2c, 0x07, 0x3b, 0x61, 0x08, 0xd7,
                            0x2d, 0x98, 0x10, 0xa3, 0x09, 0x14, 0xdf, 0xf4};
-std::shared_ptr<EncryptionProvider> encrypt2_provider_ctr(new CTREncryptionProvider2(KeyName, key256, 32));
+std::shared_ptr<EncryptionProvider> encrypt2_provider_ctr(
+    new CTREncryptionProvider2(KeyName, key256, 32));
 
-static EncryptedEnv2::ReadKeys_t encrypt_readers={{KeyDesc, encrypt2_provider_ctr}};
-static EncryptedEnv2::WriteKey_t encrypt_writer={KeyDesc, encrypt2_provider_ctr};
+static EncryptedEnv2::ReadKeys_t encrypt_readers = {
+    {KeyDesc, encrypt2_provider_ctr}};
+static EncryptedEnv2::WriteKey_t encrypt_writer = {KeyDesc,
+                                                   encrypt2_provider_ctr};
 
-static std::unique_ptr<Env> encrypt2_env(new NormalizingEnvWrapper(EncryptedEnv2::Default(encrypt_readers, encrypt_writer)));
-
+static std::unique_ptr<Env> encrypt2_env(new NormalizingEnvWrapper(
+    EncryptedEnv2::Default(encrypt_readers, encrypt_writer)));
 
 INSTANTIATE_TEST_CASE_P(EncryptedEnv2, EnvBasicTestWithParam,
                         ::testing::Values(encrypt2_env.get()));
@@ -591,7 +589,7 @@ TEST_P(EnvBasicTestWithParam, LargeWrite) {
     read += result.size();
   }
   ASSERT_TRUE(write_data == read_data);
-  delete [] scratch;
+  delete[] scratch;
 }
 
 TEST_P(EnvMoreTestWithParam, GetModTime) {
@@ -653,19 +651,16 @@ TEST_P(EnvMoreTestWithParam, GetChildren) {
   ASSERT_EQ(0U, children.size());
 }
 
-
 class SstWriterBug : public testing::Test {
  public:
   std::string test_dir_;
-  Env * env_default_ = Env::Default();
+  Env* env_default_ = Env::Default();
 
   SstWriterBug() {
     test_dir_ = test::PerThreadDBPath(env_default_, "env_encrypt2_test");
   }
 
-  void SetUp() {
-    env_default_->CreateDirIfMissing(test_dir_);
-  }
+  void SetUp() { env_default_->CreateDirIfMissing(test_dir_); }
 
   void TearDown() {
     std::vector<std::string> files;
@@ -701,7 +696,7 @@ TEST(SstWriterBug, BugCheck) {
 
 }  // namespace rocksdb
 
-#endif // ROCKSDB_OPENSSL_AES_CTR
+#endif  // ROCKSDB_OPENSSL_AES_CTR
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
