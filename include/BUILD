@@ -2,7 +2,6 @@ DEPS = select({
     "@toolchain//:is_target_linux": [
     ],
     "@toolchain//:is_target_osx": [
-        "@openssl_osx//:openssl_dev",
     ],
     "@toolchain//:is_target_windows": [
     ],
