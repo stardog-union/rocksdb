@@ -13,9 +13,6 @@
 #include <cctype>
 #include <iostream>
 
-#include "openssl/aes.h"
-#include "openssl/evp.h"
-#include "openssl/rand.h"
 #include "rocksdb/env_encryption.h"
 #include "util/aligned_buffer.h"
 #include "util/coding.h"
