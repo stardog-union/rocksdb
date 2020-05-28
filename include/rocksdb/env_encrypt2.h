@@ -52,6 +52,8 @@ struct Sha1Description_t {
 
   Sha1Description_t(const std::string& key_desc_str);
 
+  // see AesCtrKey_t destructor below.  This data is not really
+  //  essential to clear, but trying to set pattern for future work.
   // goal is to explicitly remove desc from memory once no longer needed
   ~Sha1Description_t() {
     memset(desc, 0, EVP_MAX_MD_SIZE);
@@ -87,6 +89,11 @@ struct AesCtrKey_t {
 
   AesCtrKey_t(const std::string& key_str);
 
+  // see Writing Solid Code, 2nd edition
+  //   Chapter 9, page 321, Managing Secrets in Memory ... bullet 4 "Scrub the memory"
+  // Not saying this is essential or effective in initial implementation since current
+  //  usage model loads all keys at start and only deletes them at shutdown. But does
+  //  establish presidence.
   // goal is to explicitly remove key from memory once no longer needed
   ~AesCtrKey_t() {
     memset(key, 0, EVP_MAX_KEY_LENGTH);
@@ -307,7 +314,6 @@ class EncryptedEnv2 : public EnvWrapper {
             provider = it->second;
             stream.reset(new AESBlockAccessCipherStream(
                 ptr->key(), code_version, prefix_buffer.nonce_));
-            ;
           } else {
             status = Status::NotSupported(
                 "No encryption key found to match input file");
