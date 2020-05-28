@@ -139,6 +139,7 @@ cpp_library(
         "env/env.cc",
         "env/env_chroot.cc",
         "env/env_encryption.cc",
+        "env/env_encrypt2.cc",
         "env/env_hdfs.cc",
         "env/env_posix.cc",
         "env/io_posix.cc",
@@ -227,6 +228,7 @@ cpp_library(
         "util/filter_policy.cc",
         "util/hash.cc",
         "util/jemalloc_nodump_allocator.cc",
+        "util/library_loader.cc",
         "util/log_buffer.cc",
         "util/murmurhash.cc",
         "util/random.cc",
@@ -703,6 +705,11 @@ ROCKS_TESTS = [
         "serial",
     ],
     [
+        "env_encrypt2_test",
+        "env/env_encrypt2_test.cc",
+        "serial",
+    ],
+    [
         "env_test",
         "env/env_test.cc",
         "serial",
@@ -810,6 +817,11 @@ ROCKS_TESTS = [
     [
         "ldb_cmd_test",
         "tools/ldb_cmd_test.cc",
+        "serial",
+    ],
+    [
+        "library_loader_test",
+        "util/library_loader_test.cc",
         "serial",
     ],
     [

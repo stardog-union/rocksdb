@@ -419,8 +419,10 @@ TESTS = \
 	coding_test \
 	inlineskiplist_test \
 	env_basic_test \
+	env_encrypt2_test \
 	env_test \
 	hash_test \
+	library_loader_test \
 	thread_local_test \
 	rate_limiter_test \
 	perf_context_test \
@@ -1135,6 +1137,9 @@ coding_test: util/coding_test.o $(LIBOBJECTS) $(TESTHARNESS)
 hash_test: util/hash_test.o $(LIBOBJECTS) $(TESTHARNESS)
 	$(AM_LINK)
 
+library_loader_test: util/library_loader_test.o $(LIBOBJECTS) $(TESTHARNESS)
+	$(AM_LINK)
+
 option_change_migration_test: utilities/option_change_migration/option_change_migration_test.o db/db_test_util.o $(LIBOBJECTS) $(TESTHARNESS)
 	$(AM_LINK)
 
@@ -1304,6 +1309,9 @@ sim_cache_test: utilities/simulator_cache/sim_cache_test.o db/db_test_util.o $(L
 	$(AM_LINK)
 
 spatial_db_test: utilities/spatialdb/spatial_db_test.o $(LIBOBJECTS) $(TESTHARNESS)
+	$(AM_LINK)
+
+env_encrypt2_test: env/env_encrypt2_test.o $(LIBOBJECTS) $(TESTHARNESS)
 	$(AM_LINK)
 
 env_mirror_test: utilities/env_mirror_test.o $(LIBOBJECTS) $(TESTHARNESS)
