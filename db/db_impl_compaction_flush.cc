@@ -1057,6 +1057,7 @@ void DBImpl::NotifyOnCompactionBegin(ColumnFamilyData* cfd,
   TEST_SYNC_POINT("DBImpl::NotifyOnCompactionBegin::UnlockMutex");
   {
     CompactionJobInfo info;
+    info.cf_id = cfd->GetID();
     info.cf_name = cfd->GetName();
     info.status = st;
     info.thread_id = env_->GetThreadID();
