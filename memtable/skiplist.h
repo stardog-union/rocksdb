@@ -50,7 +50,7 @@ class SkipList {
   // and will allocate memory using "*allocator".  Objects allocated in the
   // allocator must remain allocated for the lifetime of the skiplist object.
   explicit SkipList(Comparator cmp, Allocator* allocator,
-                    int32_t max_height = 12, int32_t branching_factor = 4);
+                    int32_t max_height = 17, int32_t branching_factor = 4);
 
   // Insert key into the list.
   // REQUIRES: nothing that compares equal to key is currently in the list.

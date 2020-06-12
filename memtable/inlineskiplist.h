@@ -72,7 +72,7 @@ class InlineSkipList {
   // in the allocator must remain allocated for the lifetime of the
   // skiplist object.
   explicit InlineSkipList(Comparator cmp, Allocator* allocator,
-                          int32_t max_height = 12,
+                          int32_t max_height = 17,
                           int32_t branching_factor = 4);
 
   // Allocates a key and a skip-list node, returning a pointer to the key
