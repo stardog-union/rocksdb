@@ -12,8 +12,8 @@
 #include "env/mock_env.h"
 #include "rocksdb/env.h"
 #include "rocksdb/env_encryption.h"
-#include "rocksdb/utilities/object_registry.h"
 #include "util/testharness.h"
+
 namespace rocksdb {
 
 // Normalizes trivial differences across Envs such that these test cases can
@@ -91,6 +91,7 @@ static std::unique_ptr<Env> mock_env(new MockEnv(Env::Default()));
 INSTANTIATE_TEST_CASE_P(MockEnv, EnvBasicTestWithParam,
                         ::testing::Values(mock_env.get()));
 
+#ifndef ROCKSDB_LITE
 // next statements run env test against default encryption code.
 static ROT13BlockCipher encrypt_block_rot13(32);
 
@@ -102,6 +103,7 @@ INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvBasicTestWithParam,
                         ::testing::Values(encrypt_env.get()));
 INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvMoreTestWithParam,
                         ::testing::Values(encrypt_env.get()));
+#endif  // ROCKSDB_LITE
 
 #ifndef ROCKSDB_LITE
 static std::unique_ptr<Env> mem_env(NewMemEnv(Env::Default()));
@@ -117,13 +119,11 @@ namespace {
 // ValuesIn() will skip running tests when given an empty collection.
 std::vector<Env*> GetCustomEnvs() {
   static Env* custom_env;
-  static std::unique_ptr<Env> custom_env_guard;
   static bool init = false;
   if (!init) {
     init = true;
     const char* uri = getenv("TEST_ENV_URI");
     if (uri != nullptr) {
-      custom_env = NewCustomObject<Env>(uri, &custom_env_guard);
 //      Env::LoadEnv(uri, &custom_env);
     }
   }
@@ -363,7 +363,7 @@ TEST_P(EnvMoreTestWithParam, GetChildren) {
   ASSERT_EQ(0U, children.size());
 }
 
-}  // namespace rocksdb
+}  // namespace ROCKSDB_NAMESPACE
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
