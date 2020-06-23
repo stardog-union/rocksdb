@@ -240,7 +240,10 @@ class EncryptedSequentialFile : public SequentialFile {
   // REQUIRES: External synchronization
   virtual Status Skip(uint64_t n) override;
 
-  // Indicates the upper layers if the current SequentialFile implementation
+  // Sets the file position indicator to the "n" positions from the start of the file;
+  virtual Status Seek(uint64_t n) override;
+
+    // Indicates the upper layers if the current SequentialFile implementation
   // uses direct IO.
   virtual bool use_direct_io() const override;
 

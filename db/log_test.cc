@@ -53,13 +53,16 @@ class LogTest : public ::testing::TestWithParam<int> {
     bool force_eof_;
     size_t force_eof_position_;
     bool returned_partial_;
+    const char* data_;
+
     explicit StringSource(Slice& contents) :
       contents_(contents),
       force_error_(false),
       force_error_position_(0),
       force_eof_(false),
       force_eof_position_(0),
-      returned_partial_(false) { }
+      returned_partial_(false),
+      data_(contents.data()) {}
 
     virtual Status Read(size_t n, Slice* result, char* scratch) override {
       EXPECT_TRUE(!returned_partial_) << "must not Read() after eof/error";
@@ -106,9 +109,14 @@ class LogTest : public ::testing::TestWithParam<int> {
         return Status::NotFound("in-memory file skipepd past end");
       }
 
-      contents_.remove_prefix(n);
+      contents_.remove_prefix( -(data_-contents_.data()) );
+        contents_.remove_prefix( n );
 
       return Status::OK();
+    }
+
+    virtual Status Seek(uint64_t n) override {
+        return Status::NotSupported("not supported");
     }
   };
 

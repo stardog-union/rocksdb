@@ -71,6 +71,8 @@ class PosixSequentialFile : public SequentialFile {
   virtual Status Skip(uint64_t n) override;
   virtual Status InvalidateCache(size_t offset, size_t length) override;
   virtual bool use_direct_io() const override { return use_direct_io_; }
+  virtual Status Seek(uint64_t /*offset*/);
+
   virtual size_t GetRequiredBufferAlignment() const override {
     return logical_sector_size_;
   }

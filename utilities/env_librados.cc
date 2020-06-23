@@ -162,6 +162,17 @@ public:
   }
 
   /**
+   * Sets the file position indicator to the "n" positions from the start of the file;
+   *
+   * @param n offset [description]
+   * @return  [description]
+   */
+  Status Seek(uint64_t n) {
+    _offset = n;
+    return Status::OK();
+  }
+
+    /**
    * @brief noop
    * @details
    *  rocksdb has it's own caching capabilities that we should be able to use,

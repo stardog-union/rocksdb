@@ -522,7 +522,17 @@ class StringEnv : public EnvWrapper {
       return Status::OK();
     }
 
-   private:
+    Status Seek(uint64_t n) override {
+      if (offset_ >= data_.size()) {
+        return Status::InvalidArgument(
+                      "Attemp to read when it already reached eof.");
+      }
+
+      offset_ = static_cast<size_t>(n);
+      return Status::OK();
+    }
+
+  private:
     std::string data_;
     size_t offset_;
   };

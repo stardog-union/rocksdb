@@ -205,7 +205,13 @@ class MockSequentialFile : public SequentialFile {
     return Status::OK();
   }
 
- private:
+  virtual Status Seek(uint64_t n) override {
+    pos_ = static_cast<size_t>(n);
+    return Status::OK();
+  }
+
+
+private:
   MemFile* file_;
   size_t pos_;
 };

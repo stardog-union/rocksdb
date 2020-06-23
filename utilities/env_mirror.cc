@@ -50,6 +50,14 @@ class SequentialFileMirror : public SequentialFile {
     assert(as == bs);
     return as;
   }
+
+  Status Seek(uint64_t n) override {
+    Status as = a_->Seek(n);
+    Status bs = b_->Seek(n);
+    assert(as == bs);
+    return as;
+  }
+
   Status InvalidateCache(size_t offset, size_t length) override {
     Status as = a_->InvalidateCache(offset, length);
     Status bs = b_->InvalidateCache(offset, length);

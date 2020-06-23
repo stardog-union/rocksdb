@@ -529,6 +529,9 @@ class SequentialFile {
   // uses direct IO.
   virtual bool use_direct_io() const { return false; }
 
+  // Sets the file position indicator to the "n" positions from the start of the file;
+  virtual Status Seek(uint64_t n) = 0;
+
   // Use the returned alignment value to allocate
   // aligned buffer for Direct I/O
   virtual size_t GetRequiredBufferAlignment() const { return kDefaultPageSize; }

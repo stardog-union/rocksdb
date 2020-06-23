@@ -1169,6 +1169,7 @@ class ReportFileOpEnv : public EnvWrapper {
       }
 
       virtual Status Skip(uint64_t n) override { return target_->Skip(n); }
+      virtual Status Seek(uint64_t n) override { return target_->Seek(n); }
     };
 
     Status s = target()->NewSequentialFile(f, r, soptions);

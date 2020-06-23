@@ -228,6 +228,15 @@ Status PosixSequentialFile::Skip(uint64_t n) {
   return Status::OK();
 }
 
+Status PosixSequentialFile::Seek(uint64_t n) {
+  if (fseek(file_, static_cast<long int>(n), SEEK_SET)) {
+    return IOError("While fseek to seek to position " + ToString(n), filename_,
+                    errno);
+  }
+
+  return Status::OK();
+}
+
 Status PosixSequentialFile::InvalidateCache(size_t offset, size_t length) {
 #ifndef OS_LINUX
   (void)offset;

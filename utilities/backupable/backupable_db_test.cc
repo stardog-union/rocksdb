@@ -173,7 +173,13 @@ class TestEnv : public EnvWrapper {
       size_left = (n > size_left) ? size_left - n : 0;
       return Status::OK();
     }
-   private:
+
+    virtual Status Seek(uint64_t n) override {
+      size_left = 200-n;
+      return Status::OK();
+    }
+
+  private:
     size_t size_left = 200;
     Random rnd_;
     bool fail_reads_;
