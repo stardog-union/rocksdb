@@ -5,6 +5,9 @@
 
 #include <gtest/gtest.h>
 
+#ifdef ROCKSDB_OPENSSL_AES_CTR
+#ifndef ROCKSDB_LITE
+
 #include "util/library_loader.h"
 
 namespace rocksdb {
@@ -18,7 +21,7 @@ namespace rocksdb {
     static const char * LIB_BAD_NAME = "libbubbagump.so";
     static const char * LIB_SSL_NAME = "libssl.so";
 #endif
-    
+
 
 class UnixLibraryLoaderTest {};
 
@@ -78,8 +81,10 @@ TEST(UnixLibraryLoaderTest, Crypto) {
 
 }
 
-
 }  // namespace rocksdb
+
+#endif  // ROCKSDB_LITE
+#endif  // ROCKSDB_OPENSSL_AES_CTR
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
