@@ -252,7 +252,7 @@ Status EncryptedEnv2::NewSequentialFile(const std::string& fname,
     if (status.ok()) {
       if (provider) {
         (*result) = std::unique_ptr<SequentialFile>(
-            new EncryptedSequentialFile(underlying.release(), stream.release(),
+            new EncryptedSequentialFile(std::move(underlying), std::move(stream),
                                         provider->GetPrefixLength()));
 
       } else {
@@ -290,7 +290,7 @@ Status EncryptedEnv2::NewRandomAccessFile(
       if (provider) {
         (*result) =
             std::unique_ptr<RandomAccessFile>(new EncryptedRandomAccessFile(
-                underlying.release(), stream.release(),
+                std::move(underlying), std::move(stream),
                 provider->GetPrefixLength()));
 
       } else {
@@ -322,7 +322,7 @@ Status EncryptedEnv2::NewWritableFile(const std::string& fname,
 
         if (status.ok()) {
           (*result) = std::unique_ptr<WritableFile>(new EncryptedWritableFile(
-              underlying.release(), stream.release(),
+              std::move(underlying), std::move(stream),
               encrypt_write_.second->GetPrefixLength()));
         }
       } else {
@@ -362,7 +362,7 @@ Status EncryptedEnv2::ReopenWritableFile(const std::string& fname,
 
         if (status.ok()) {
           (*result) = std::unique_ptr<WritableFile>(new EncryptedWritableFile(
-              underlying.release(), stream.release(),
+              std::move(underlying), std::move(stream),
               encrypt_write_.second->GetPrefixLength()));
         }
       } else {
@@ -398,7 +398,7 @@ Status EncryptedEnv2::ReuseWritableFile(const std::string& fname,
 
         if (status.ok()) {
           (*result) = std::unique_ptr<WritableFile>(new EncryptedWritableFile(
-              underlying.release(), stream.release(),
+              std::move(underlying), std::move(stream),
               encrypt_write_.second->GetPrefixLength()));
         }
       } else {
@@ -452,7 +452,7 @@ Status EncryptedEnv2::NewRandomRWFile(const std::string& fname,
       if (status.ok()) {
         if (provider) {
           (*result) = std::unique_ptr<RandomRWFile>(
-              new EncryptedRandomRWFile(underlying.release(), stream.release(),
+              new EncryptedRandomRWFile(std::move(underlying), std::move(stream),
                                         provider->GetPrefixLength()));
         } else {
           (*result).reset(underlying.release());

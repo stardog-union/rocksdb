@@ -3,9 +3,15 @@
 //  COPYING file in the root directory) and Apache 2.0 License
 //  (found in the LICENSE.Apache file in the root directory).
 
+#ifdef ROCKSDB_OPENSSL_AES_CTR
+#ifndef ROCKSDB_LITE
+
 #include "util/library_loader.h"
 
 #include <dlfcn.h>
+#include <stdio.h>
+
+#include "rocksdb/status.h"
 
 // link with -ldl
 
@@ -16,7 +22,7 @@ namespace rocksdb {
 #else
     const char * UnixLibCrypto::crypto_lib_name_ = "libcrypto.so";
 #endif
-    
+
 UnixLibraryLoader::UnixLibraryLoader(const char * library_name)
     : dl_handle_(nullptr) {
 
@@ -112,3 +118,6 @@ UnixLibCrypto::UnixLibCrypto()
 }
 
 } // namespace rocksdb
+
+#endif  // ROCKSDB_LITE
+#endif  // ROCKSDB_OPENSSL_AES_CTR
