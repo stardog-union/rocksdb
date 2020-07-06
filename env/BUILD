@@ -5,11 +5,13 @@ COMMON_HDRS = []
 PLATFORM_HDRS = select({
     "//:linux" : [
         "env_chroot.h",
+        "env_encrypt2_impl.h",
         "io_posix.h",
         "posix_logger.h",
     ],
     "//:osx" : [
         "env_chroot.h",
+        "env_encrypt2_impl.h",
         "io_posix.h",
         "posix_logger.h",
     ],
