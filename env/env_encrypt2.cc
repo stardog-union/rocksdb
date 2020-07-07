@@ -432,7 +432,13 @@ EncryptedEnvV2::EncryptedEnvV2(Env* base_env,
 }
 
 EncryptedEnvV2::EncryptedEnvV2(Env* base_env)
-    : EnvWrapper(base_env), valid_(false) {}
+    : EnvWrapper(base_env), valid_(false) {
+
+  valid_ = crypto_.IsValid();
+  if (IsValid()) {
+    crypto_.RAND_poll();
+  }
+}
 
 void EncryptedEnvV2::SetKeys(EncryptedEnvV2::ReadKeys encrypt_read,
                              EncryptedEnvV2::WriteKey encrypt_write) {
@@ -440,6 +446,7 @@ void EncryptedEnvV2::SetKeys(EncryptedEnvV2::ReadKeys encrypt_read,
   encrypt_read_ = encrypt_read;
   encrypt_write_ = encrypt_write;
   key_lock.WriteUnlock();
+
 }
 
 bool EncryptedEnvV2::IsWriteEncrypted() const {
