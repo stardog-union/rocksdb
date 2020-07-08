@@ -123,7 +123,6 @@ typedef union {
 Status AESBlockAccessCipherStream::Encrypt(uint64_t file_offset, char* data,
                                            size_t data_size) {
   Status status;
-
   if (0 < data_size) {
     if (EncryptedEnvV2::crypto_.IsValid()) {
       int ret_val, out_len;
@@ -378,7 +377,8 @@ Status EncryptedRandomRWFileV2::Write(uint64_t offset, const Slice& data) {
     buf.Size(data.size() + block_offset);
     {
       PERF_TIMER_GUARD(encrypt_data_nanos);
-      status = stream_->Encrypt(offset, buf.BufferStart()+block_offset, data.size());
+      status = stream_->Encrypt(offset - block_offset, buf.BufferStart(),
+                                buf.CurrentSize());
     }
     if (status.ok()) {
       dataToWrite = Slice(buf.BufferStart()+block_offset, data.size());
@@ -872,7 +872,7 @@ Status EncryptedEnvV2::NewRandomRWFile(const std::string& fname,
       // establish encrypt or not, finalize file object
       if (status.ok()) {
         if (provider) {
-          (*result) = std::unique_ptr<RandomRWFile>(new EncryptedRandomRWFile(
+          (*result) = std::unique_ptr<RandomRWFile>(new EncryptedRandomRWFileV2(
               std::move(underlying), std::move(stream),
               provider->GetPrefixLength()));
         } else {
