@@ -34,6 +34,7 @@
 
 namespace rocksdb {
 
+class DynamicLibrary;
 class FileLock;
 class Logger;
 class RandomAccessFile;
@@ -317,6 +318,18 @@ class Env {
   // REQUIRES: lock was returned by a successful LockFile() call
   // REQUIRES: lock has not already been unlocked.
   virtual Status UnlockFile(FileLock* lock) = 0;
+
+  // Opens `lib_name` as a dynamic library.
+  // If the 'search_path' is specified, breaks the path into its components
+  // based on the appropriate platform separator (";" or ";") and looks for the
+  // library in those directories.  If 'search path is not specified, uses the
+  // default library path search mechanism (such as LD_LIBRARY_PATH). On
+  // success, stores a dynamic library in `*result`.
+  virtual Status LoadLibrary(const std::string& /*lib_name*/,
+                             const std::string& /*search_path */,
+                             std::shared_ptr<DynamicLibrary>* /*result*/) {
+    return Status::NotSupported("LoadLibrary is not implemented in this Env");
+  }
 
   // Priority for scheduling job in thread pool
   enum Priority { BOTTOM, LOW, HIGH, TOTAL };
@@ -938,6 +951,27 @@ class FileLock {
   // No copying allowed
   FileLock(const FileLock&);
   void operator=(const FileLock&);
+};
+
+class DynamicLibrary {
+ public:
+  virtual ~DynamicLibrary() {}
+
+  // Returns the name of the dynamic library.
+  virtual const char* Name() const = 0;
+
+  // Loads the symbol for sym_name from the library and updates the input
+  // function. Returns the loaded symbol.
+  template <typename T>
+  Status LoadFunction(const std::string& sym_name, std::function<T>* function) {
+    assert(nullptr != function);
+    void* ptr = nullptr;
+    Status s = LoadSymbol(sym_name, &ptr);
+    *function = reinterpret_cast<T*>(ptr);
+    return s;
+  }
+  // Loads and returns the symbol for sym_name from the library.
+  virtual Status LoadSymbol(const std::string& sym_name, void** func) = 0;
 };
 
 extern void LogFlush(const std::shared_ptr<Logger>& info_log);
