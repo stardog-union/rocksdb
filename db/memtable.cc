@@ -601,6 +601,23 @@ struct Saver {
 };
 }  // namespace
 
+static void mergeValue(Saver* s, const char* key_ptr, uint32_t key_length,
+                       const MergeOperator* merge_operator,  MergeContext* merge_context) {
+    Slice v = GetLengthPrefixedSlice(key_ptr + key_length);
+
+    *(s->status) = Status::OK();
+    if (*(s->merge_in_progress)) {
+        if (s->value != nullptr) {
+            *(s->status) = MergeHelper::TimedFullMerge(
+                    merge_operator, s->key->user_key(), &v,
+                    merge_context->GetOperands(), s->value, s->logger,
+                    s->statistics, s->env_, nullptr /* result_operand */, true);
+        }
+    } else if (s->value != nullptr) {
+        s->value->assign(v.data(), v.size());
+    }
+}
+
 static bool SaveValue(void* arg, const char* entry) {
   Saver* s = reinterpret_cast<Saver*>(arg);
   assert(s != nullptr);
@@ -657,23 +674,12 @@ static bool SaveValue(void* arg, const char* entry) {
         FALLTHROUGH_INTENDED;
       case kTypeValue: {
         if (s->inplace_update_support) {
-          s->mem->GetLock(s->key->user_key())->ReadLock();
+            rocksdb::ReadLock(s->mem->GetLock(s->key->user_key()));
+            mergeValue(s,key_ptr,key_length,merge_operator,merge_context);
+        } else {
+            mergeValue(s,key_ptr,key_length,merge_operator,merge_context);
         }
-        Slice v = GetLengthPrefixedSlice(key_ptr + key_length);
-        *(s->status) = Status::OK();
-        if (*(s->merge_in_progress)) {
-          if (s->value != nullptr) {
-            *(s->status) = MergeHelper::TimedFullMerge(
-                merge_operator, s->key->user_key(), &v,
-                merge_context->GetOperands(), s->value, s->logger,
-                s->statistics, s->env_, nullptr /* result_operand */, true);
-          }
-        } else if (s->value != nullptr) {
-          s->value->assign(v.data(), v.size());
-        }
-        if (s->inplace_update_support) {
-          s->mem->GetLock(s->key->user_key())->ReadUnlock();
-        }
+
         *(s->found_final_value) = true;
         if (s->is_blob_index != nullptr) {
           *(s->is_blob_index) = (type == kTypeBlobIndex);

@@ -450,17 +450,19 @@ EncryptedEnvV2::EncryptedEnvV2(Env* base_env)
 
 void EncryptedEnvV2::SetKeys(EncryptedEnvV2::ReadKeys encrypt_read,
                              EncryptedEnvV2::WriteKey encrypt_write) {
-  key_lock.WriteLock();
+  rocksdb::WriteLock aWriteLock(&key_lock);
   encrypt_read_ = encrypt_read;
   encrypt_write_ = encrypt_write;
-  key_lock.WriteUnlock();
-
 }
 
 bool EncryptedEnvV2::IsWriteEncrypted() const {
-  key_lock.ReadLock();
-  bool ret_flag = (nullptr != encrypt_write_.second);
-  key_lock.ReadUnlock();
+  bool ret_flag;
+
+  {
+     rocksdb::ReadLock aReadLock(&key_lock);
+     ret_flag = (nullptr != encrypt_write_.second);
+  }
+
   return ret_flag;
 }
 
@@ -481,6 +483,7 @@ Status EncryptedEnvV2::ReadSeqEncryptionPrefix(
   EncryptMarker marker;
   Slice marker_slice;
   status = f->Read(sizeof(marker), &marker_slice, marker);
+
   if (status.ok()) {
     if (sizeof(marker) == marker_slice.size() &&
         marker_slice.starts_with(kEncryptMarker)) {
@@ -492,29 +495,31 @@ Status EncryptedEnvV2::ReadSeqEncryptionPrefix(
         PrefixVersion0 prefix_buffer;
         status = f->Read(sizeof(PrefixVersion0), &prefix_slice,
                          (char*)&prefix_buffer);
+
         if (status.ok() && sizeof(PrefixVersion0) == prefix_slice.size()) {
           Sha1Description desc(prefix_buffer.key_description_,
                                sizeof(prefix_buffer.key_description_));
+            {
+              rocksdb::ReadLock aReadLock(&key_lock);
+              auto it = encrypt_read_.find(desc);
 
-          key_lock.ReadLock();
-          auto it = encrypt_read_.find(desc);
-          if (encrypt_read_.end() != it) {
-            provider = it->second;
-            stream.reset(new AESBlockAccessCipherStream(
-                provider->key(), code_version, prefix_buffer.nonce_));
-
-          } else {
-            status = Status::NotSupported(
-                "No encryption key found to match input file");
-          }
-          key_lock.ReadUnlock();
+              if (encrypt_read_.end() != it) {
+                  provider = it->second;
+                  stream.reset(new AESBlockAccessCipherStream(
+                        provider->key(), code_version, prefix_buffer.nonce_));
+              } else {
+                  status = Status::NotSupported(
+                    "No encryption key found to match input file");
+              }
+            }
+        } else {
+          status =
+                Status::NotSupported("Unknown encryption code version required.");
         }
-      } else {
-        status =
-            Status::NotSupported("Unknown encryption code version required.");
       }
     }
   }
+
   return status;
 }
 
@@ -544,18 +549,18 @@ Status EncryptedEnvV2::ReadRandEncryptionPrefix(
         if (status.ok() && sizeof(PrefixVersion0) == prefix_slice.size()) {
           Sha1Description desc(prefix_buffer.key_description_,
                                sizeof(prefix_buffer.key_description_));
-
-          key_lock.ReadLock();
-          auto it = encrypt_read_.find(desc);
-          if (encrypt_read_.end() != it) {
-            provider = it->second;
-            stream.reset(new AESBlockAccessCipherStream(
-                provider->key(), code_version, prefix_buffer.nonce_));
-          } else {
-            status = Status::NotSupported(
-                "No encryption key found to match input file");
+          {
+              rocksdb::ReadLock aReadLock(&key_lock);
+              auto it = encrypt_read_.find(desc);
+              if (encrypt_read_.end() != it) {
+                  provider = it->second;
+                  stream.reset(new AESBlockAccessCipherStream(
+                      provider->key(), code_version, prefix_buffer.nonce_));
+              } else {
+                  status = Status::NotSupported(
+                      "No encryption key found to match input file");
+              }
           }
-          key_lock.ReadUnlock();
         }
       } else {
         status =
@@ -724,9 +729,10 @@ Status EncryptedEnvV2::NewWritableFile(const std::string& fname,
     if (status.ok()) {
       std::shared_ptr<const CTREncryptionProviderV2> provider;
 
-      key_lock.ReadLock();
-      provider = encrypt_write_.second;
-      key_lock.ReadUnlock();
+      {
+          rocksdb::ReadLock aReadLock(&key_lock);
+          provider = encrypt_write_.second;
+      }
 
       if (provider) {
         std::unique_ptr<BlockAccessCipherStream> stream;
@@ -770,9 +776,10 @@ Status EncryptedEnvV2::ReopenWritableFile(const std::string& fname,
     if (status.ok()) {
       std::shared_ptr<const CTREncryptionProviderV2> provider;
 
-      key_lock.ReadLock();
-      provider = encrypt_write_.second;
-      key_lock.ReadUnlock();
+      {
+        rocksdb::ReadLock aReadLock(&key_lock);
+        provider = encrypt_write_.second;
+      }
 
       if (provider) {
         std::unique_ptr<BlockAccessCipherStream> stream;
@@ -812,9 +819,10 @@ Status EncryptedEnvV2::ReuseWritableFile(const std::string& fname,
     if (status.ok()) {
       std::shared_ptr<const CTREncryptionProviderV2> provider;
 
-      key_lock.ReadLock();
-      provider = encrypt_write_.second;
-      key_lock.ReadUnlock();
+      {
+          rocksdb::ReadLock aReadLock(&key_lock);
+          provider = encrypt_write_.second;
+      }
 
       if (provider) {
         std::unique_ptr<BlockAccessCipherStream> stream;
@@ -867,9 +875,10 @@ Status EncryptedEnvV2::NewRandomRWFile(const std::string& fname,
                                                         provider, stream);
       } else {
         // new file
-        key_lock.ReadLock();
-        provider = encrypt_write_.second;
-        key_lock.ReadUnlock();
+        {
+            rocksdb::ReadLock aReadLock(&key_lock);
+            provider = encrypt_write_.second;
+        }
 
         if (provider) {
           status =

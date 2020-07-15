@@ -6,6 +6,7 @@
 #ifndef ROCKSDB_LITE
 #include "rocksdb/memtablerep.h"
 
+#include <memory>
 #include <unordered_set>
 #include <set>
 #include <memory>
@@ -251,20 +252,25 @@ void VectorRep::Iterator::SeekToLast() {
 
 void VectorRep::Get(const LookupKey& k, void* callback_args,
                     bool (*callback_func)(void* arg, const char* entry)) {
-  rwlock_.ReadLock();
-  VectorRep* vector_rep;
-  std::shared_ptr<Bucket> bucket;
-  if (immutable_) {
-    vector_rep = this;
-  } else {
-    vector_rep = nullptr;
-    bucket.reset(new Bucket(*bucket_));  // make a copy
-  }
-  VectorRep::Iterator iter(vector_rep, immutable_ ? bucket_ : bucket, compare_);
-  rwlock_.ReadUnlock();
+  std::unique_ptr<VectorRep::Iterator> iter{};
 
-  for (iter.Seek(k.user_key(), k.memtable_key().data());
-       iter.Valid() && callback_func(callback_args, iter.key()); iter.Next()) {
+  {
+      rocksdb::ReadLock aReadLock(&rwlock_);
+      VectorRep *vector_rep;
+      std::shared_ptr<Bucket> bucket;
+
+      if (immutable_) {
+          vector_rep = this;
+      } else {
+          vector_rep = nullptr;
+          bucket = std::make_shared<Bucket>(*bucket_);  // make a copy
+      }
+
+      iter.reset(new VectorRep::Iterator(vector_rep, immutable_ ? bucket_ : bucket, compare_));
+  }
+
+  for (iter->Seek(k.user_key(), k.memtable_key().data());
+       iter->Valid() && callback_func(callback_args, iter->key()); iter->Next()) {
   }
 }
 

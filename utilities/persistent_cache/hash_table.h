@@ -117,15 +117,16 @@ class HashTable {
     const uint32_t lock_idx = bucket_idx % nlocks_;
 
     port::RWMutex& lock = locks_[lock_idx];
-    lock.ReadLock();
 
-    auto& bucket = buckets_[bucket_idx];
-    if (Find(&bucket, t, ret)) {
-      *ret_lock = &lock;
-      return true;
+    {
+        rocksdb::ReadLock aReadLock(&lock);
+        auto &bucket = buckets_[bucket_idx];
+        if (Find(&bucket, t, ret)) {
+            *ret_lock = &lock;
+            return true;
+        }
     }
 
-    lock.ReadUnlock();
     return false;
   }
 
