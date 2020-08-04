@@ -76,6 +76,17 @@ TEST(UnixLibraryLoaderTest, Crypto) {
   crypto.EVP_MD_CTX_free(context);
 }
 
+TEST(UnixLibraryLoaderTest, Random) {
+  UnixLibCrypto crypto;
+
+  ASSERT_TRUE(crypto.IsValid());
+  ASSERT_TRUE(1==crypto.RAND_poll());
+
+  uint8_t buffer[512];
+  ASSERT_TRUE(1==crypto.RAND_bytes(buffer, sizeof(buffer)));
+
+}
+
 }  // namespace ROCKSDB_NAMESPACE
 
 #endif  // ROCKSDB_LITE
