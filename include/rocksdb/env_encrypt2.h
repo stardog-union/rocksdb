@@ -276,6 +276,8 @@ class EncryptedEnvV2 : public EnvWrapper {
   bool IsValid() const { return valid_; }
 
  protected:
+  void init();
+
   // following is not thread safe, intended for constuction
   //  and unit test only
   void SetKeys(ReadKeys encrypt_read, WriteKey encrypt_write);
@@ -301,7 +303,7 @@ class EncryptedEnvV2 : public EnvWrapper {
       std::unique_ptr<BlockAccessCipherStream>& stream);
 
  public:
-  static UnixLibCrypto crypto_;
+  std::shared_ptr<UnixLibCrypto> crypto_;
 
  protected:
   ReadKeys encrypt_read_;
