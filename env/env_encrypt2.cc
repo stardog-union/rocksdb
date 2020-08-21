@@ -433,6 +433,7 @@ EncryptedEnvV2::EncryptedEnvV2(Env* base_env,
   SetKeys(encrypt_read, encrypt_write);
 }
 
+
 EncryptedEnvV2::EncryptedEnvV2(Env* base_env)
     : EnvWrapper(base_env), valid_(false) {
   init();
