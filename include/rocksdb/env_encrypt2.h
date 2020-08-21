@@ -73,6 +73,18 @@ struct Sha1Description {
   }
 
   bool IsValid() const { return valid; }
+
+  std::string ToString(size_t byte_count = 20) const {
+    if (IsValid()) {
+      if (EVP_MAX_MD_SIZE < byte_count) {
+        byte_count = EVP_MAX_MD_SIZE;
+      }
+      rocksdb::Slice to_hex((const char *)desc, byte_count);
+      return to_hex.ToString(true);
+    } else {
+      return std::string();
+    }
+  }
 };
 
 struct AesCtrKey {
@@ -112,6 +124,18 @@ struct AesCtrKey {
   }
 
   bool IsValid() const { return valid; }
+
+  std::string ToString(size_t byte_count = 32) const {
+    if (IsValid()) {
+      if (EVP_MAX_KEY_LENGTH < byte_count) {
+        byte_count = EVP_MAX_KEY_LENGTH;
+      }
+      rocksdb::Slice to_hex((const char *)key, byte_count);
+      return to_hex.ToString(true);
+    } else {
+      return std::string();
+    }
+  }
 };
 
 class CTREncryptionProviderV2 : public EncryptionProvider {
@@ -147,9 +171,21 @@ class CTREncryptionProviderV2 : public EncryptionProvider {
   virtual BlockAccessCipherStream* CreateCipherStream2(
       uint8_t code_version, const uint8_t nonce[]) const;
 
-  bool Valid() const { return valid_; };
+  bool IsValid() const { return valid_; };
   const Sha1Description& key_desc() const { return key_desc_; };
   const AesCtrKey& key() const { return key_; };
+
+  std::string ToString() const {
+    std::string result;
+    if (IsValid()) {
+      result = key_desc_.ToString();
+      result += " : ";
+      result += key_.ToString();
+    } else {
+      result = " : ";
+    }
+    return result;
+  }
 
  protected:
   bool valid_;
@@ -276,6 +312,8 @@ class EncryptedEnvV2 : public EnvWrapper {
   bool IsValid() const { return valid_; }
 
  protected:
+  void init();
+
   // following is not thread safe, intended for constuction
   //  and unit test only
   void SetKeys(ReadKeys encrypt_read, WriteKey encrypt_write);
@@ -301,12 +339,12 @@ class EncryptedEnvV2 : public EnvWrapper {
       std::unique_ptr<BlockAccessCipherStream>& stream);
 
  public:
-  static UnixLibCrypto crypto_;
+  std::shared_ptr<UnixLibCrypto> crypto_;
 
  protected:
   ReadKeys encrypt_read_;
   WriteKey encrypt_write_;
-
+  mutable port::RWMutex key_lock_;
   bool valid_;
 };
 
