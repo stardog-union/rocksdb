@@ -245,6 +245,8 @@ class EncryptedEnvV2 : public EnvWrapper {
 
   EncryptedEnvV2(Env* base_env, ReadKeys encrypt_read, WriteKey encrypt_write);
 
+  void SetKeys(ReadKeys encrypt_read, WriteKey encrypt_write);
+
   bool IsWriteEncrypted() const;
 
   // NewSequentialFile opens a file for sequential reading.
@@ -313,10 +315,6 @@ class EncryptedEnvV2 : public EnvWrapper {
 
  protected:
   void init();
-
-  // following is not thread safe, intended for constuction
-  //  and unit test only
-  void SetKeys(ReadKeys encrypt_read, WriteKey encrypt_write);
 
   template <class TypeFile>
   Status ReadSeqEncryptionPrefix(
