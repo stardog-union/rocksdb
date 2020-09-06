@@ -43,7 +43,7 @@ SpecialEnv::SpecialEnv(Env* base)
   table_write_callback_ = nullptr;
 }
 #ifndef ROCKSDB_LITE
-ROT13BlockCipher rot13Cipher_(16);
+//ROT13BlockCipher rot13Cipher_(16);
 #endif  // ROCKSDB_LITE
 
 DBTestBase::DBTestBase(const std::string path)
@@ -53,7 +53,8 @@ DBTestBase::DBTestBase(const std::string path)
           !getenv("ENCRYPTED_ENV")
               ? nullptr
               : NewEncryptedEnv(mem_env_ ? mem_env_ : Env::Default(),
-                                new CTREncryptionProvider(rot13Cipher_))),
+                                //                                new CTREncryptionProvider(rot13Cipher_))),
+                                nullptr)),
 #else
       encrypted_env_(nullptr),
 #endif  // ROCKSDB_LITE

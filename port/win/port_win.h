@@ -93,6 +93,7 @@ namespace port {
 // For use at db/file_indexer.h kLevelMaxIndex
 const uint32_t kMaxUint32 = UINT32_MAX;
 const int kMaxInt32 = INT32_MAX;
+const int kMinInt32 = INT32_MIN;
 const int64_t kMaxInt64 = INT64_MAX;
 const uint64_t kMaxUint64 = UINT64_MAX;
 

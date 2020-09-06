@@ -419,7 +419,6 @@ TESTS = \
 	coding_test \
 	inlineskiplist_test \
 	env_basic_test \
-	env_encrypt2_test \
 	env_test \
 	hash_test \
 	library_loader_test \

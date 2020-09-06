@@ -10,7 +10,9 @@
 
 #include "openssl/aes.h"
 #include "openssl/evp.h"
-#include "rocksdb/env_encrypt2.h"
+#include <openssl/rand.h>
+
+#include "rocksdb/env_openssl.h"
 
 namespace ROCKSDB_NAMESPACE {
 
@@ -24,10 +26,10 @@ namespace ROCKSDB_NAMESPACE {
 #endif
 #endif
 
-constexpr uint8_t kEncryptCodeVersion0{'0'};
+constexpr uint8_t kOpenSSLEncryptCodeVersion1{'1'};
 
-typedef char EncryptMarker[8];
-static EncryptMarker kEncryptMarker = "Encrypt";
+typedef char OpenSSLEncryptMarker[8];
+static OpenSSLEncryptMarker kOpenSSLEncryptMarker = "Encrypt";
 
 // long term:  code_version could be used in a switch statement or factory
 // prefix version 0 is 12 byte sha1 description hash, 128 bit (16 byte)
@@ -70,6 +72,7 @@ class AESBlockAccessCipherStream : public BlockAccessCipherStream {
     return Status::NotSupported("Wrong EncryptionProvider assumed");
   };
 
+  const std::string fname_;  // saving this for debug logging as needed
   AesCtrKey key_;
   uint8_t code_version_;
   uint8_t nonce_[AES_BLOCK_SIZE];
