@@ -161,8 +161,8 @@ class EncryptionProviderOpenSSL : public EncryptionProvider {
   Status CreateNewPrefix(const std::string& /*fname*/, char* prefix,
                          size_t prefixLength) const override;
 
-  virtual Status AddCipher(const std::string& descriptor, const char* cipher,
-                           size_t len, bool for_write) = 0;
+  Status AddCipher(const std::string& descriptor, const char* cipher,
+                           size_t len, bool for_write) override;
 
   Status CreateCipherStream(
       const std::string& /*fname*/, const EnvOptions& /*options*/,
@@ -171,10 +171,10 @@ class EncryptionProviderOpenSSL : public EncryptionProvider {
 
   bool IsValid() const { return valid_; };
 
- protected:
   using WriteKey = std::pair<ShaDescription, AesCtrKey>;
   using ReadKeys = std::map<ShaDescription, AesCtrKey>;
 
+ protected:
   ReadKeys encrypt_read_;
   WriteKey encrypt_write_;
   mutable port::RWMutex key_lock_;

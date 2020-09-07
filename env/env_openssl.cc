@@ -244,9 +244,10 @@ Status EncryptionProviderOpenSSL::CreateNewPrefix(const std::string& /*fname*/,
       int ret_val;
 
       memcpy(prefix, kOpenSSLEncryptMarker, sizeof(kOpenSSLEncryptMarker));
-      *(prefix + sizeof(kOpenSSLEncryptMarker)) = kOpenSSLEncryptCodeVersion1;
+      *(prefix + sizeof(kOpenSSLEncryptMarker) - 1) = kOpenSSLEncryptCodeVersion1;
 
       PrefixVersion0* pf = {(PrefixVersion0*)(prefix + sizeof(OpenSSLEncryptMarker))};
+      ReadLock lock(&key_lock_);
       memcpy(pf->key_description_, encrypt_write_.first.desc, sizeof(encrypt_write_.first.desc));
       ret_val = crypto_shared->RAND_bytes((unsigned char*)&pf->nonce_,
                                                    AES_BLOCK_SIZE);
@@ -276,11 +277,12 @@ Status EncryptionProviderOpenSSL::CreateCipherStream(
   // for direct io, prefix size matched to one page to keep file contents aligned.
   if (kDefaultPageSize == prefix.size()) {
     if (prefix.starts_with(kOpenSSLEncryptMarker)) {
-        uint8_t code_version = (uint8_t)prefix[sizeof(kOpenSSLEncryptMarker)];
+      uint8_t code_version = (uint8_t)*(prefix.data()+sizeof(kOpenSSLEncryptMarker)-1);
         switch (code_version) {
           case kOpenSSLEncryptCodeVersion1: {
             PrefixVersion0 * prefix_struct = (PrefixVersion0 *)(prefix.data() + sizeof(OpenSSLEncryptMarker));
             ShaDescription desc(prefix_struct->key_description_, sizeof(PrefixVersion0::key_description_));
+            ReadLock lock(&key_lock_);
             auto read_key = encrypt_read_.find(desc);
 
             if (encrypt_read_.end() != read_key) {
@@ -305,6 +307,29 @@ Status EncryptionProviderOpenSSL::CreateCipherStream(
 
   return stat;
 }
+
+Status EncryptionProviderOpenSSL::AddCipher(const std::string& descriptor, const char* cipher,
+                                            size_t len, bool for_write) {
+  Status stat;
+
+  // it is possible for one or both to be invalid implying ... unencrypted writes
+  ShaDescription desc(descriptor);
+  AesCtrKey aes((const uint8_t*)cipher, len);
+
+  WriteLock lock(&key_lock_);
+
+  auto it = encrypt_read_.insert(std::pair<ShaDescription, AesCtrKey>(desc, aes));
+  if (it.second) {
+    if (for_write) {
+      encrypt_write_ = std::pair<ShaDescription, AesCtrKey>(desc, aes);
+    }
+  } else {
+    stat = Status::InvalidArgument("Duplicate encryption key");
+  }
+
+  return stat;
+}
+
 
 }  // namespace ROCKSDB_NAMESPACE
 

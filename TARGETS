@@ -705,8 +705,8 @@ ROCKS_TESTS = [
         "serial",
     ],
     [
-        "env_encrypt2_test",
-        "env/env_encrypt2_test.cc",
+        "env_openssl_test",
+        "env/env_openssl_test.cc",
         "serial",
     ],
     [
