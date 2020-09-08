@@ -374,6 +374,30 @@ TEST(EncryptOpenSSL_Provider, NistSingleCall) {
   Status status = stream.Encrypt(offset, (char*)output, sizeof(plain1));
   ASSERT_TRUE(status.ok());
   ASSERT_TRUE(0 == memcmp(cypher1, output, sizeof(output)));
+
+  //
+  // check partial blocks fore and aft
+  //
+  uint8_t scratch[sizeof(plain1) + 32];  // empty block before and after
+
+  // outer loop is starting offset, inner loop is size of encryption
+  for (size_t outer = 0; outer < 16; ++outer) {
+    for (size_t inner = 0; inner < (64 - outer); ++ inner) {
+      memset(scratch, 0, sizeof(scratch));
+      memcpy(&scratch[16 + outer], &plain1[outer], inner);
+      status = stream.Encrypt(outer, (char*)&scratch[16 + outer], inner);
+      ASSERT_TRUE(status.ok());
+      ASSERT_TRUE(0 == memcmp(&cypher1[outer], &scratch[16 + outer], inner));
+
+      // the test depends upon fact that cypher1 contains no 0x00 byte
+      for (size_t loop=0; loop < 16 + outer; ++loop) {
+        ASSERT_TRUE('\0' == scratch[loop]);
+      }
+      for (size_t loop=(outer+inner+16); loop < 96; ++loop) {
+        ASSERT_TRUE('\0' == scratch[loop]);
+      }
+    }
+  }
 }
 
 TEST(EncryptOpenSSL_Provider, BigEndianAdd) {
