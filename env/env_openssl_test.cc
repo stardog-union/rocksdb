@@ -381,7 +381,7 @@ TEST(EncryptOpenSSL_Provider, NistSingleCall) {
   uint8_t scratch[sizeof(plain1) + 32];  // empty block before and after
 
   // outer loop is starting offset, inner loop is size of encryption
-  for (size_t outer = 0; outer < 16; ++outer) {
+  for (size_t outer = 0; outer < 32; ++outer) {
     for (size_t inner = 0; inner < (64 - outer); ++ inner) {
       memset(scratch, 0, sizeof(scratch));
       memcpy(&scratch[16 + outer], &plain1[outer], inner);
