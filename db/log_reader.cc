@@ -336,7 +336,7 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result, size_t* drop_size) {
     const unsigned int type = header[6];
     const uint32_t length = a | (b << 8);
     int header_size = kHeaderSize;
-    if (type >= kRecyclableFullType && type <= kRecyclableLastType) {
+/*    if (type >= kRecyclableFullType && type <= kRecyclableLastType) {
       if (end_of_buffer_offset_ - buffer_.size() == 0) {
         recycled_ = true;
       }
@@ -353,18 +353,21 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result, size_t* drop_size) {
       if (log_num != log_number_) {
         return kOldRecord;
       }
-    }
+    }*/
+//      fprintf(stderr, "header_size = %d, length = %d, buffer_.size() = %zu\n",
+//              header_size, length, buffer_.size());
     if (header_size + length > buffer_.size()) {
       if (!retry_after_eof_) {
         *drop_size = buffer_.size();
-        buffer_.clear();
         if (!eof_) {
+            buffer_.clear();
           return kBadRecordLen;
         }
         // If the end of the file has been reached without reading |length|
         // bytes of payload, assume the writer died in the middle of writing the
         // record. Don't report a corruption unless requested.
         if (*drop_size) {
+            buffer_.clear();
           return kBadHeader;
         }
       } else {

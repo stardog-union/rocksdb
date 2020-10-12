@@ -22,6 +22,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <iostream>
 #include "db/compaction.h"
 #include "db/internal_stats.h"
 #include "db/log_reader.h"
@@ -3063,7 +3064,7 @@ Status VersionSet::ProcessManifestWrites(
     if (s.ok()) {
       for (auto& e : batch_edits) {
         std::string record;
-        if (!e->EncodeTo(&record)) {
+        if (!e->EncodeTo(&record)) { // TODO: important spot!
           s = Status::Corruption("Unable to encode VersionEdit:" +
                                  e->DebugString(true));
           break;
@@ -3784,6 +3785,9 @@ Status VersionSet::ListColumnFamilies(std::vector<std::string>* column_families,
     if (!s.ok()) {
       break;
     }
+//      std::cout << edit.DebugString(true) << std::endl;
+
+
     if (edit.is_column_family_add_) {
       if (column_family_names.find(edit.column_family_) !=
           column_family_names.end()) {

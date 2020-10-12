@@ -140,6 +140,7 @@ Status Writer::EmitPhysicalRecord(RecordType t, const char* ptr, size_t n) {
     }
   }
   block_offset_ += header_size + n;
+//  fprintf(stderr, "block_offset_ = %zu\n", block_offset_);
   return s;
 }
 

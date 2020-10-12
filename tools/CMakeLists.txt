@@ -5,6 +5,7 @@ set(TOOLS
   write_stress.cc
   ldb.cc
   db_repl_stress.cc
+        jess_append.cc
   dump/rocksdb_dump.cc
   dump/rocksdb_undump.cc)
 foreach(src ${TOOLS})
