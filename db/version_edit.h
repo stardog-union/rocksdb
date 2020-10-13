@@ -334,6 +334,7 @@ class VersionEdit {
   DeletedFileSet deleted_files_;
   std::vector<std::pair<int, FileMetaData>> new_files_;
 
+public:
   // Each version edit record should have column_family_ set
   // If it's not set, it is default (0)
   uint32_t column_family_;
