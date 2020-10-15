@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 
+#include "set"
+
 #include "env/env_encrypt2_impl.h"
 #include "rocksdb/options.h"
 #include "rocksdb/sst_file_writer.h"
@@ -119,6 +121,25 @@ TEST(EnvEncrypt2_Sha1, Copy) {
   for (size_t idx = sizeof(md3); idx < sizeof(desc4.desc); ++idx) {
     ASSERT_TRUE(0 == desc4.desc[idx]);
   }
+}
+
+TEST(Envencrypt2_Sha1, compare) {
+  Sha1Description one("fileone");
+  Sha1Description two("filetwo");
+  Sha1Description disable("Disable write");
+
+  std::set<Sha1Description> desc_set;
+
+  desc_set.insert(one);
+  desc_set.insert(two);
+  desc_set.insert(disable);
+
+  auto it = desc_set.find(one);
+  ASSERT_TRUE(desc_set.end() != it);
+  it = desc_set.find(two);
+  ASSERT_TRUE(desc_set.end() != it);
+  it = desc_set.find(disable);
+  ASSERT_TRUE(desc_set.end() != it);
 }
 
 class EnvEncrypt2_Key {};
