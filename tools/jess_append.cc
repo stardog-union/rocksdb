@@ -267,6 +267,85 @@ void rewrite_evrens_manifest() {
     }
 }
 
+void rewrite_springer_manifest() {
+
+    EnvOptions options;
+    Env *env = Env::Default();
+    std::unique_ptr<WritableFile> wfile;
+    std::string filename("/home/jbalint/dl/MANIFEST-045285-new");
+    OK(env->NewWritableFile(filename, &wfile, options));
+
+    std::unique_ptr<WritableFileWriter> file_writer(new WritableFileWriter(
+            std::move(wfile),
+            (std::string &) filename,
+            options));
+
+    log::Writer writer(std::move(file_writer), 999999999, false);
+
+    std::vector<uint32_t> cfs_to_delete;
+    // build the set of CFs taking into account ColumnFamilyDrop, just like VersionSet does
+    std::unordered_map<std::string, std::unordered_map<uint32_t, CfToDrop*>> log_cfs_by_db();
+
+    // added after i realized we cant write a separate file due to the 32k block structure
+    // which necessitates padding
+    {
+        std::unique_ptr<SequentialFile> rfile;
+        const char *manifest_file_name = "/home/jbalint/dl/MANIFEST-045285";
+        OK(env->NewSequentialFile(manifest_file_name, &rfile, options));
+
+        std::unique_ptr<SequentialFileReader> file_reader(new SequentialFileReader(std::move(rfile),
+                                                                                   manifest_file_name));
+
+        int log_number = 1234; // TODO: need to compute this from the file name? or accept in argv
+        log::Reader log_reader(logger,
+                               std::move(file_reader), nullptr, true, log_number, false);
+
+        Slice record;
+        std::string scratch;
+        while (log_reader.ReadRecord(&record, &scratch)) {
+            VersionEdit edit;
+            OK(edit.DecodeFrom(record));
+
+            if (edit.is_column_family_add_) {
+                const char *name = edit.column_family_name_.c_str();
+                int name_len = strchr(name, '.') - name;
+                std::string name_s(name, name_len);
+
+                std::unordered_map<uint32_t, CfToDrop*>* db_cfs;
+
+                if (log_cfs_by_db.find(name_s) == log_cfs_by_db->end()) {
+                    db_cfs = malloc(sizeof(std::unordered_map<uint32_t, CfToDrop*>));
+                    log_cfs_by_db.
+                }
+
+                // 1083 is the txn id we want to keep for the "test" DB
+                if (!strncmp(&edit.column_family_name_[0], "test.", 5) &&
+                    !strstr(&edit.column_family_name_[0], "_1083")) {
+                    printf("Adding ColumnFamilyDrop record for: %s\n", &edit.column_family_name_[0]);
+                    cfs_to_delete.push_back(edit.column_family_);
+                }
+            }
+
+            std::string buf;
+            edit.EncodeTo(&buf);
+
+            OK(writer.AddRecord(buf));
+        }
+    }
+
+    //test.equalityindex_1083
+    cfs_to_delete.push_back(38);
+
+    for (uint32_t cf_id : cfs_to_delete) {
+        std::string buf;
+        VersionEdit record;
+        record.DropColumnFamily();
+        record.SetColumnFamily(cf_id);
+        record.EncodeTo(&buf);
+        OK(writer.AddRecord(buf));
+    }
+}
+
 int main(int argc, const char *argv[]) {
     argc--;
     if (argc == 2 && !strcmp(argv[1], "-dump")) {
@@ -278,5 +357,7 @@ int main(int argc, const char *argv[]) {
 //        generate_cf_drop_log_records(names);
 
 //        rewrite_evrens_manifest();
+
+        rewrite_springer_manifest();
     }
 }
