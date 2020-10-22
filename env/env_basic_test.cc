@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "env/mock_env.h"
+#include "rocksdb/convenience.h"
 #include "rocksdb/env.h"
 #include "rocksdb/env_encryption.h"
 #include "util/testharness.h"
@@ -19,7 +20,12 @@ namespace rocksdb {
 // Normalizes trivial differences across Envs such that these test cases can
 // run on all Envs.
 class NormalizingEnvWrapper : public EnvWrapper {
+ private:
+  std::unique_ptr<Env> base_;
+
  public:
+  explicit NormalizingEnvWrapper(std::unique_ptr<Env>&& base)
+      : EnvWrapper(base.get()), base_(std::move(base)) {}
   explicit NormalizingEnvWrapper(Env* base) : EnvWrapper(base) {}
 
   // Removes . and .. from directory listing
@@ -93,16 +99,21 @@ INSTANTIATE_TEST_CASE_P(MockEnv, EnvBasicTestWithParam,
 
 #ifndef ROCKSDB_LITE
 // next statements run env test against default encryption code.
-static ROT13BlockCipher encrypt_block_rot13(32);
+static Env* NewTestEncryptedEnv(Env* base, const std::string& provider_id) {
+  std::shared_ptr<EncryptionProvider> provider;
+  EXPECT_OK(EncryptionProvider::CreateFromString(ConfigOptions(), provider_id,
+                                                 &provider));
+  std::unique_ptr<Env> encrypted(NewEncryptedEnv(base, provider));
+  return new NormalizingEnvWrapper(std::move(encrypted));
+}
 
-static CTREncryptionProvider encrypt_provider_ctr(encrypt_block_rot13);
-
-static std::unique_ptr<Env> encrypt_env(new NormalizingEnvWrapper(
-    NewEncryptedEnv(Env::Default(), &encrypt_provider_ctr)));
+// next statements run env test against default encryption code.
+static std::unique_ptr<Env> ctr_encrypt_env(NewTestEncryptedEnv(Env::Default(),
+                                                                "test://CTR"));
 INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvBasicTestWithParam,
-                        ::testing::Values(encrypt_env.get()));
+                        ::testing::Values(ctr_encrypt_env.get()));
 INSTANTIATE_TEST_CASE_P(EncryptedEnv, EnvMoreTestWithParam,
-                        ::testing::Values(encrypt_env.get()));
+                        ::testing::Values(ctr_encrypt_env.get()));
 #endif  // ROCKSDB_LITE
 
 #ifndef ROCKSDB_LITE

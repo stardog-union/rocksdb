@@ -419,7 +419,7 @@ TESTS = \
 	coding_test \
 	inlineskiplist_test \
 	env_basic_test \
-	env_encrypt2_test \
+	env_openssl_test \
 	env_test \
 	hash_test \
 	library_loader_test \
@@ -1311,7 +1311,7 @@ sim_cache_test: utilities/simulator_cache/sim_cache_test.o db/db_test_util.o $(L
 spatial_db_test: utilities/spatialdb/spatial_db_test.o $(LIBOBJECTS) $(TESTHARNESS)
 	$(AM_LINK)
 
-env_encrypt2_test: env/env_encrypt2_test.o $(LIBOBJECTS) $(TESTHARNESS)
+env_openssl_test: env/env_openssl_test.o $(LIBOBJECTS) $(TESTHARNESS)
 	$(AM_LINK)
 
 env_mirror_test: utilities/env_mirror_test.o $(LIBOBJECTS) $(TESTHARNESS)

@@ -61,8 +61,8 @@ LIB_SOURCES =                                                   \
   env/env.cc                                                    \
   env/env_chroot.cc                                             \
   env/env_encryption.cc                                         \
-  env/env_encrypt2.cc                                           \
   env/env_hdfs.cc                                               \
+  env/env_openssl.cc                                            \
   env/env_posix.cc                                              \
   env/io_posix.cc                                               \
   env/mock_env.cc                                               \
@@ -346,7 +346,7 @@ MAIN_SOURCES =                                                          \
   db/write_callback_test.cc                                             \
   db/write_controller_test.cc                                           \
   env/env_basic_test.cc                                                 \
-  env/env_encrypt2_test.cc                                              \
+  env/env_openssl_test.cc                                               \
   env/env_test.cc                                                       \
   env/mock_env_test.cc                                                  \
   memtable/inlineskiplist_test.cc                                       \
