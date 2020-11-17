@@ -1,10 +1,12 @@
+# Note - these "@//" need to come from Stardog requiring this
+#        be built as a dependency, not standalone
 DEPS = select({
-    "@toolchain//:is_target_linux": [
+    "@//:is_target_linux": [
     ],
-    "@toolchain//:is_target_osx": [
+    "@//:is_target_osx": [
         "@openssl_osx//:openssl_dev",
     ],
-    "@toolchain//:is_target_windows": [
+    "@//:is_target_windows": [
     ],
 })
 
