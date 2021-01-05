@@ -379,13 +379,17 @@ void StatisticsImpl::recordTick(uint32_t tickerType, uint64_t count) {
 void StatisticsImpl::measureTime(uint32_t histogramType, uint64_t value) {
   assert(enable_internal_stats_ ? histogramType < INTERNAL_HISTOGRAM_ENUM_MAX
                                 : histogramType < HISTOGRAM_ENUM_MAX);
-
+#if 0
   if (histogramType < HISTOGRAM_ENUM_MAX || enable_internal_stats_) {
     getThreadHistogramInfo(histogramType)->value.Add(value);
   }
   if (stats_ && histogramType < HISTOGRAM_ENUM_MAX) {
     stats_->measureTime(histogramType, value);
   }
+#else
+  (void)histogramType;
+  (void)value;
+#endif
 }
 
 Status StatisticsImpl::Reset() {
