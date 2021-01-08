@@ -91,7 +91,7 @@ class StopWatchNano {
     }
   }
 
-  void Start() { start_ = env_->NowNanos(); }
+  void Start() { start_ = 0; /*env_->NowNanos();*/ }
 
   uint64_t ElapsedNanos(bool reset = false) {
     auto now = 0; // env_->NowNanos();
