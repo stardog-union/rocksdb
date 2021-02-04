@@ -87,8 +87,12 @@ class WriteBufferManager {
     }
   }
 
+  void SetBufferSize(size_t new_size) {
+    buffer_size_ = new_size;
+  }
+
  private:
-  const size_t buffer_size_;
+  std::atomic<size_t> buffer_size_;
   const size_t mutable_limit_;
   std::atomic<size_t> memory_used_;
   // Memory that hasn't been scheduled to free.
