@@ -216,7 +216,7 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
   endif()
   if(MINGW)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format -fno-asynchronous-unwind-tables")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-format")
     add_definitions(-D_POSIX_C_SOURCE=1)
   endif()
   if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -887,12 +887,12 @@ if(WIN32)
     port/win/env_default.cc
     port/win/port_win.cc
     port/win/win_logger.cc)
-  if(NOT MINGW)
+#  if(NOT MINGW)
     # Mingw only supports std::thread when using
     # posix threads.
     list(APPEND SOURCES
       port/win/win_thread.cc)
-  endif()
+#  endif()
 if(WITH_XPRESS)
   list(APPEND SOURCES
     port/win/xpress_win.cc)
