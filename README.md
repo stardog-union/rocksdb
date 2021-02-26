@@ -1,3 +1,8 @@
+## Stardog Notes
+
+* release branch based upon RocksDB 6.x is "stardog/develop"
+* release branch based upon RocksDB 5.x is "stardog-5.x-releases"
+
 ## RocksDB: A Persistent Key-Value Store for Flash and RAM Storage
 
 [![CircleCI Status](https://circleci.com/gh/facebook/rocksdb.svg?style=svg)](https://circleci.com/gh/facebook/rocksdb)
