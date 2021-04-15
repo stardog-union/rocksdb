@@ -63,21 +63,23 @@ Status MergeHelper::TimedFullMerge(const MergeOperator* merge_operator,
     return Status::OK();
   }
 
+#if 0
   if (update_num_ops_stats) {
     RecordInHistogram(statistics, READ_NUM_MERGE_OPERANDS,
                       static_cast<uint64_t>(operands.size()));
   }
-
+#endif
   bool success;
   Slice tmp_result_operand(nullptr, 0);
   const MergeOperator::MergeOperationInput merge_in(key, value, operands,
                                                     logger);
   MergeOperator::MergeOperationOutput merge_out(*result, tmp_result_operand);
   {
+#if 0
     // Setup to time the merge
     StopWatchNano timer(env, statistics != nullptr);
     PERF_TIMER_GUARD(merge_operator_time_nanos);
-
+#endif
     // Do the merge
     success = merge_operator->FullMergeV2(merge_in, &merge_out);
 
@@ -92,12 +94,14 @@ Status MergeHelper::TimedFullMerge(const MergeOperator* merge_operator,
       *result_operand = Slice(nullptr, 0);
     }
 
+#if 0
     RecordTick(statistics, MERGE_OPERATION_TOTAL_TIME,
                statistics ? timer.ElapsedNanos() : 0);
+#endif
   }
 
   if (!success) {
-    RecordTick(statistics, NUMBER_MERGE_FAILURES);
+    //    RecordTick(statistics, NUMBER_MERGE_FAILURES);
     return Status::Corruption("Error: Could not perform merge.");
   }
 
@@ -348,15 +352,19 @@ Status MergeHelper::MergeUntil(InternalIterator* iter,
       bool merge_success = false;
       std::string merge_result;
       {
+#if 0
         StopWatchNano timer(env_, stats_ != nullptr);
         PERF_TIMER_GUARD(merge_operator_time_nanos);
+#endif
         merge_success = user_merge_operator_->PartialMergeMulti(
             orig_ikey.user_key,
             std::deque<Slice>(merge_context_.GetOperands().begin(),
                               merge_context_.GetOperands().end()),
             &merge_result, logger_);
+#if 0
         RecordTick(stats_, MERGE_OPERATION_TOTAL_TIME,
                    stats_ ? timer.ElapsedNanosSafe() : 0);
+#endif
       }
       if (merge_success) {
         // Merging of operands (associative merge) was successful.
@@ -414,7 +422,9 @@ CompactionFilter::Decision MergeHelper::FilterMerge(const Slice& user_key,
                                                        kValueTypeForSeek);
     }
   }
-  total_filter_time_ += filter_timer_.ElapsedNanosSafe();
+  if (stats_ != nullptr && ShouldReportDetailedTime(env_, stats_)) {
+    total_filter_time_ += filter_timer_.ElapsedNanosSafe();
+  }
   return ret;
 }
 
