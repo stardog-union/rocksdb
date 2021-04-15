@@ -13,8 +13,9 @@
 #include <memory>
 #include <string.h>
 
+#ifdef ROCKSDB_JEMALLOC
 #include "port/jemalloc_helper.h"
-
+#endif  // ROCKSDB_JEMALLOC
 
 namespace rocksdb {
 
