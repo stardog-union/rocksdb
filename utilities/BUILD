@@ -1,0 +1,151 @@
+load("//:rocksdb.bzl", "constrained_test")
+
+cc_library(
+    name = "utilities",
+    srcs = glob(["*.cc"], exclude = ["column_aware_encoding_exp.cc", "*_test.cc", "env_librados.cc"]),
+    deps = [
+        ":headers",
+        "//db:headers",
+        "//monitoring:headers",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "headers",
+    hdrs = glob(["*.h"]),
+    deps = [
+        "//util:headers",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+constrained_test(
+    name = "column_aware_encoding_test",
+    srcs = ["column_aware_encoding_test.cc"],
+    deps = [
+        ":utilities",
+        "//cache",
+        "//db",
+        "//env",
+        "//memtable",
+        "//monitoring",
+        "//table",
+        "//table:test_utils",
+        "//third_party/gtest",
+        "//util",
+        "//util:test_utils",
+	"//utilities/backupable",
+	"//utilities/checkpoint",
+	"//utilities/merge_operators",
+	"//utilities/merge_operators/string_append",
+	"//utilities/options",
+	"//utilities/transactions",
+	"//utilities/ttl",
+	"//utilities/write_batch_with_index",
+    ],
+)
+
+constrained_test(
+    name = "env_mirror_test",
+    srcs = ["env_mirror_test.cc"],
+    deps = [
+        ":utilities",
+        "//cache",
+        "//db",
+        "//env",
+        "//memtable",
+        "//monitoring",
+        "//table",
+        "//table:test_utils",
+        "//third_party/gtest",
+        "//util",
+        "//util:test_utils",
+	"//utilities/backupable",
+	"//utilities/checkpoint",
+	"//utilities/merge_operators",
+	"//utilities/merge_operators/string_append",
+	"//utilities/options",
+	"//utilities/transactions",
+	"//utilities/ttl",
+	"//utilities/write_batch_with_index",
+    ],
+)
+
+constrained_test(
+    name = "env_timed_test",
+    srcs = ["env_timed_test.cc"],
+    deps = [
+        ":utilities",
+        "//cache",
+        "//db",
+        "//env",
+        "//memtable",
+        "//monitoring",
+        "//table",
+        "//table:test_utils",
+        "//third_party/gtest",
+        "//util",
+        "//util:test_utils",
+	"//utilities/backupable",
+	"//utilities/checkpoint",
+	"//utilities/merge_operators",
+	"//utilities/merge_operators/string_append",
+	"//utilities/options",
+	"//utilities/transactions",
+	"//utilities/ttl",
+	"//utilities/write_batch_with_index",
+    ],
+)
+
+constrained_test(
+    name = "object_registry_test",
+    srcs = ["object_registry_test.cc"],
+    deps = [
+        ":utilities",
+        "//cache",
+        "//db",
+        "//env",
+        "//memtable",
+        "//monitoring",
+        "//table",
+        "//table:test_utils",
+        "//third_party/gtest",
+        "//util",
+        "//util:test_utils",
+	"//utilities/backupable",
+	"//utilities/checkpoint",
+	"//utilities/merge_operators",
+	"//utilities/merge_operators/string_append",
+	"//utilities/options",
+	"//utilities/transactions",
+	"//utilities/ttl",
+	"//utilities/write_batch_with_index",
+    ],
+)
+
+constrained_test(
+    name = "util_merge_operators_test",
+    srcs = ["util_merge_operators_test.cc"],
+    deps = [
+        ":utilities",
+        "//cache",
+        "//db",
+        "//env",
+        "//memtable",
+        "//monitoring",
+        "//table",
+        "//table:test_utils",
+        "//third_party/gtest",
+        "//util",
+        "//util:test_utils",
+	"//utilities/backupable",
+	"//utilities/checkpoint",
+	"//utilities/merge_operators",
+	"//utilities/merge_operators/string_append",
+	"//utilities/options",
+	"//utilities/transactions",
+	"//utilities/ttl",
+	"//utilities/write_batch_with_index",
+    ],
+)
