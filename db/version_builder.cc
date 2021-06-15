@@ -969,11 +969,24 @@ class VersionBuilder::Rep {
             true /* record_read_stats */,
             internal_stats->GetFileReadHist(level), false, level,
             prefetch_index_and_filter_in_cache, max_file_size_for_l0_meta_pin);
+
+        // the code here is attempting two things:
+        //  1. preload / warm the table cache with new file objects
+        //  2. create higher performance via a cache lookup avoidance
+        // The issue is that number 2 creates permanent objects in the
+        //  table cache which over time are no longer useful.  The code
+        //  adjustment below keeps #1 and disables #2.
+#if 0
         if (file_meta->table_reader_handle != nullptr) {
           // Load table_reader
           file_meta->fd.table_reader = table_cache_->GetTableReaderFromHandle(
               file_meta->table_reader_handle);
         }
+#else
+        table_cache_->ReleaseHandle(file_meta->table_reader_handle);
+        file_meta->table_reader_handle = nullptr;
+#endif
+
       }
     });
 
