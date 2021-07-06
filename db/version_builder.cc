@@ -904,6 +904,11 @@ class VersionBuilder::Rep {
     size_t table_cache_capacity = table_cache_->get_cache()->GetCapacity();
     bool always_load = (table_cache_capacity == TableCache::kInfiniteCapacity);
     size_t max_load = port::kMaxSizet;
+#ifndef NDEBUG
+    bool debug_override = true;  // to enable CompactedDB related tests and some property tests
+#else
+    bool debug_override = false;
+#endif
 
     if (!always_load) {
       // If it is initial loading and not set to always loading all the
@@ -976,16 +981,16 @@ class VersionBuilder::Rep {
         // The issue is that number 2 creates permanent objects in the
         //  table cache which over time are no longer useful.  The code
         //  adjustment below keeps #1 and disables #2.
-#if 0
         if (file_meta->table_reader_handle != nullptr) {
           // Load table_reader
-          file_meta->fd.table_reader = table_cache_->GetTableReaderFromHandle(
-              file_meta->table_reader_handle);
+          if (always_load || debug_override) {
+            file_meta->fd.table_reader = table_cache_->GetTableReaderFromHandle(
+                file_meta->table_reader_handle);
+          } else {
+            table_cache_->ReleaseHandle(file_meta->table_reader_handle);
+            file_meta->table_reader_handle = nullptr;
+          } // else
         }
-#else
-        table_cache_->ReleaseHandle(file_meta->table_reader_handle);
-        file_meta->table_reader_handle = nullptr;
-#endif
 
       }
     });
