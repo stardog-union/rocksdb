@@ -901,6 +901,9 @@ class VersionBuilder::Rep {
                            size_t max_file_size_for_l0_meta_pin) {
     assert(table_cache_ != nullptr);
 
+    if (kFilePreloadDisabled==ioptions_->file_preload) {
+      return Status::OK();
+    }
     size_t table_cache_capacity = table_cache_->get_cache()->GetCapacity();
     bool always_load = (table_cache_capacity == TableCache::kInfiniteCapacity);
     size_t max_load = port::kMaxSizet;
