@@ -105,6 +105,8 @@ struct ImmutableCFOptions {
 
   bool force_consistency_checks;
 
+  FilePreload file_preload;
+
   bool allow_ingest_behind;
 
   bool preserve_deletes;
