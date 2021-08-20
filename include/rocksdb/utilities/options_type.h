@@ -32,6 +32,7 @@ enum class OptionType {
   kDouble,
   kCompactionStyle,
   kCompactionPri,
+  kFilePreload,
   kSliceTransform,
   kCompressionType,
   kComparator,
