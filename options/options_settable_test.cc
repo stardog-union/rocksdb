@@ -336,9 +336,9 @@ TEST_F(OptionsSettableTest, DBOptionsAllFieldsSettable) {
                              "write_dbid_to_manifest=false;"
                              "best_efforts_recovery=false;"
                              "max_bgerror_resume_count=2;"
-                             "bgerror_resume_retry_interval=1000000"
+                             "bgerror_resume_retry_interval=1000000;"
                              "db_host_id=hostname;"
-                             "allow_data_in_errors=false",
+                             "allow_data_in_errors=false;",
                              new_options));
 
   ASSERT_EQ(unset_bytes_base, NumUnsetBytes(new_options_ptr, sizeof(DBOptions),
@@ -510,6 +510,7 @@ TEST_F(OptionsSettableTest, ColumnFamilyOptionsAllFieldsSettable) {
       "blob_compression_type=kBZip2Compression;"
       "enable_blob_garbage_collection=true;"
       "blob_garbage_collection_age_cutoff=0.5;"
+      "file_preload=kFilePreloadWithPinning;"
       "compaction_options_fifo={max_table_files_size=3;allow_"
       "compaction=false;};",
       new_options));
