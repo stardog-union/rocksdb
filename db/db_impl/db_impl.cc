@@ -4089,6 +4089,10 @@ Status DBImpl::WriteOptionsFile(bool need_mutex_lock,
 
   if (s.ok()) {
     s = RenameTempFileToOptionsFile(file_name);
+  } else {
+    // do not accumulate failed files
+    //  (could be hundreds with bad options code)
+    (void)env_->DeleteFile(file_name).ok();
   }
   // restore lock
   if (!need_mutex_lock) {
