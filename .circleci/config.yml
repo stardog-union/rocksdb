@@ -147,7 +147,7 @@ jobs:
     steps:
       - pre-steps
       - install-gflags
-      - run: make V=1 J=2 -j2 check | .circleci/cat_ignore_eagain
+      - run: make V=1 J=4 -j4 check | .circleci/cat_ignore_eagain
       - post-steps
 
   build-linux-mem-env:
