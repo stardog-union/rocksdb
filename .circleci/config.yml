@@ -144,11 +144,11 @@ jobs:
   build-linux:
     machine:
       image: ubuntu-1604:202007-01
-    resource_class: 2xlarge
+    resource_class: medium
     steps:
       - pre-steps
       - install-gflags
-      - run: make V=1 J=32 -j32 check | .circleci/cat_ignore_eagain
+      - run: make V=1 J=2 -j2 check | .circleci/cat_ignore_eagain
       - post-steps
 
   build-linux-mem-env:
