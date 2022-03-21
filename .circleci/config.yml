@@ -142,8 +142,9 @@ jobs:
       - post-steps
 
   build-linux:
-    machine:
-      image: ubuntu-1604:202007-01
+  docker:
+    - image: public.ecr.aws/s0j8x1j4/stardog-ci:20210621
+      user: stardog
     resource_class: medium
     steps:
       - pre-steps
@@ -591,6 +592,6 @@ jobs:
 
 workflows:
   version: 2
-  build-linux:
+  ci:
     jobs:
       - build-linux
