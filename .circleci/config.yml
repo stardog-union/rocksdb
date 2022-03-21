@@ -142,9 +142,9 @@ jobs:
       - post-steps
 
   build-linux:
-  docker:
-    - image: public.ecr.aws/s0j8x1j4/stardog-ci:20210621
-      user: stardog
+    docker:
+      - image: public.ecr.aws/s0j8x1j4/stardog-ci:20210621
+        user: stardog
     resource_class: medium
     steps:
       - pre-steps
