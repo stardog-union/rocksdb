@@ -35,7 +35,7 @@
 
 #pragma once
 
-#include <rocksdb/slice.h>
+#include "rocksdb/slice.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <memory>
