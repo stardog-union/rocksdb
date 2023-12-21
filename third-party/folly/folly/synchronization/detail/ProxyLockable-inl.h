@@ -13,6 +13,7 @@
 #include <memory>
 #include <mutex>
 #include <stdexcept>
+#include <system_error>
 #include <utility>
 
 namespace folly {
