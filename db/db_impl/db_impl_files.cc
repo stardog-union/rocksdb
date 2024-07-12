@@ -46,6 +46,7 @@ Status DBImpl::DisableFileDeletionsWithLock() {
   mutex_.AssertHeld();
   ++disable_delete_obsolete_files_;
   if (disable_delete_obsolete_files_ == 1) {
+    immutable_db_options().sst_file_manager->DisableFileDeletions();
     ROCKS_LOG_INFO(immutable_db_options_.info_log, "File Deletions Disabled");
   } else {
     ROCKS_LOG_WARN(immutable_db_options_.info_log,
@@ -70,6 +71,7 @@ Status DBImpl::EnableFileDeletions(bool force) {
     }
     saved_counter = disable_delete_obsolete_files_;
     if (saved_counter == 0) {
+      immutable_db_options().sst_file_manager->EnableFileDeletions(force);
       FindObsoleteFiles(&job_context, true);
       bg_cv_.SignalAll();
     }

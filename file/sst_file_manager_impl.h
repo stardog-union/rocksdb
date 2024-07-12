@@ -138,6 +138,16 @@ class SstFileManagerImpl : public SstFileManager {
     delete_scheduler_.SetStatisticsPtr(stats);
   }
 
+  // The FileDeletions management routines parallel those
+  //  declared in db.h.  Expectation is DBImpl will call here.
+  Status DisableFileDeletions() override {
+    return delete_scheduler_.DisableFileDeletions();
+  }
+
+  Status EnableFileDeletions(bool force = true) override {
+    return delete_scheduler_.EnableFileDeletions(force);
+  }
+
  private:
   // REQUIRES: mutex locked
   void OnAddFileImpl(const std::string& file_path, uint64_t file_size);

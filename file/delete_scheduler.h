@@ -8,7 +8,6 @@
 #ifndef ROCKSDB_LITE
 
 #include <map>
-#include <queue>
 #include <string>
 #include <thread>
 
@@ -90,6 +89,13 @@ class DeleteScheduler {
     stats_ = stats;
   }
 
+  // The FileDeletions management routines parallel those
+  //  declared in db.h.  Expectation is DBImpl will call
+  //  same routines in SstFileManagerImpl, that will call here.
+  Status DisableFileDeletions();
+
+  Status EnableFileDeletions(bool force = true);
+
  private:
   Status MarkAsTrash(const std::string& file_path, std::string* path_in_trash);
 
@@ -99,7 +105,7 @@ class DeleteScheduler {
 
   void BackgroundEmptyTrash();
 
-  void MaybeCreateBackgroundThread();
+  void MaybeCreateBackgroundThread(bool force = false);
 
   SystemClock* clock_;
   FileSystem* fs_;
@@ -111,14 +117,8 @@ class DeleteScheduler {
   // Mutex to protect queue_, pending_files_, bg_errors_, closing_, stats_
   InstrumentedMutex mu_;
 
-  struct FileAndDir {
-    FileAndDir(const std::string& f, const std::string& d) : fname(f), dir(d) {}
-    std::string fname;
-    std::string dir;  // empty will be skipped.
-  };
-
-  // Queue of trash files that need to be deleted
-  std::queue<FileAndDir> queue_;
+  // Was a queue of trash files that need to be deleted, now a map
+  std::map<std::string, std::string> queue_;
   // Number of trash files that are waiting to be deleted
   int32_t pending_files_;
   uint64_t bytes_max_delete_chunk_;
@@ -145,6 +145,7 @@ class DeleteScheduler {
   std::atomic<double> max_trash_db_ratio_;
   static const uint64_t kMicrosInSecond = 1000 * 1000LL;
   std::shared_ptr<Statistics> stats_;
+  std::atomic<int> disable_delete_obsolete_files_; // see same in db_impl.h
 };
 
 }  // namespace ROCKSDB_NAMESPACE

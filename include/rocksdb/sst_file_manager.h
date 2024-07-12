@@ -83,6 +83,12 @@ class SstFileManager {
 
   // Set the statistics ptr to dump the stat information
   virtual void SetStatisticsPtr(const std::shared_ptr<Statistics>& stats) = 0;
+
+  // The FileDeletions management routines parallel those
+  //  declared in db.h.  Expectation is DBImpl will call here.
+  virtual Status DisableFileDeletions() {return Status::OK();};
+
+  virtual Status EnableFileDeletions(bool /*force = true*/) {return Status::OK();};
 };
 
 // Create a new SstFileManager that can be shared among multiple RocksDB
