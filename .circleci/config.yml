@@ -143,7 +143,7 @@ jobs:
 
   build-linux:
     machine:
-      image: ubuntu-1604:202007-01
+      image: ubuntu-2404:2024.05.1
     resource_class: 2xlarge
     steps:
       - pre-steps
