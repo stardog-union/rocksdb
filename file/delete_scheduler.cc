@@ -31,7 +31,6 @@ DeleteScheduler::DeleteScheduler(SystemClock* clock, FileSystem* fs,
       fs_(fs),
       total_trash_size_(0),
       rate_bytes_per_sec_(rate_bytes_per_sec),
-      pending_files_(0),
       bytes_max_delete_chunk_(bytes_max_delete_chunk),
       closing_(false),
       cv_(&mu_),
@@ -42,6 +41,7 @@ DeleteScheduler::DeleteScheduler(SystemClock* clock, FileSystem* fs,
       disable_delete_obsolete_files_(0) {
   assert(sst_file_manager != nullptr);
   assert(max_trash_db_ratio >= 0);
+  InstrumentedMutexLock l(&mu_);
   MaybeCreateBackgroundThread();
 }
 
@@ -124,8 +124,7 @@ Status DeleteScheduler::DeleteFile(const std::string& file_path,
     InstrumentedMutexLock l(&mu_);
     RecordTick(stats_.get(), FILES_MARKED_TRASH);
     queue_.insert(std::pair<std::string,std::string>(trash_file, dir_to_sync));
-    pending_files_++;
-    if (pending_files_ == 1) {
+    if (queue_.size() == 1) {
       cv_.SignalAll();
     }
   }
@@ -194,9 +193,9 @@ Status DeleteScheduler::EnableFileDeletions(bool force) {
 
   int saved_counter = disable_delete_obsolete_files_.load();
   if (0 == saved_counter) {
-    MaybeCreateBackgroundThread(true);
     InstrumentedMutexLock l(&mu_);
-    if (pending_files_ == 1) {
+    MaybeCreateBackgroundThread();
+    if (!queue_.empty()) {
       cv_.SignalAll();
     }
   }
@@ -316,10 +315,7 @@ void DeleteScheduler::BackgroundEmptyTrash() {
       TEST_SYNC_POINT_CALLBACK("DeleteScheduler::BackgroundEmptyTrash:Wait",
                                &total_penalty);
 
-      if (is_complete) {
-        pending_files_--;
-      }
-      if (pending_files_ == 0) {
+      if (queue_.empty()) {
         // Unblock WaitForEmptyTrash since there are no more files waiting
         // to be deleted
         cv_.SignalAll();
@@ -418,13 +414,14 @@ Status DeleteScheduler::DeleteTrashFile(const std::string& path_in_trash,
 
 void DeleteScheduler::WaitForEmptyTrash() {
   InstrumentedMutexLock l(&mu_);
-  while (pending_files_ > 0 && !closing_) {
+  while (!queue_.empty() && !closing_) {
     cv_.Wait();
   }
 }
 
-void DeleteScheduler::MaybeCreateBackgroundThread(bool force) {
-  if (bg_thread_ == nullptr && (rate_bytes_per_sec_.load() > 0 || force)) {
+void DeleteScheduler::MaybeCreateBackgroundThread() {
+  mu_.AssertHeld();
+  if (bg_thread_ == nullptr && (rate_bytes_per_sec_.load() > 0 || !queue_.empty())) {
     bg_thread_.reset(
         new port::Thread(&DeleteScheduler::BackgroundEmptyTrash, this));
     ROCKS_LOG_INFO(info_log_,

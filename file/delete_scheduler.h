@@ -46,6 +46,7 @@ class DeleteScheduler {
   // Set delete rate limit in bytes per second
   void SetRateBytesPerSecond(int64_t bytes_per_sec) {
     rate_bytes_per_sec_.store(bytes_per_sec);
+    InstrumentedMutexLock l(&mu_);
     MaybeCreateBackgroundThread();
   }
 
@@ -105,7 +106,7 @@ class DeleteScheduler {
 
   void BackgroundEmptyTrash();
 
-  void MaybeCreateBackgroundThread(bool force = false);
+  void MaybeCreateBackgroundThread();
 
   SystemClock* clock_;
   FileSystem* fs_;
@@ -119,8 +120,7 @@ class DeleteScheduler {
 
   // Was a queue of trash files that need to be deleted, now a map
   std::map<std::string, std::string> queue_;
-  // Number of trash files that are waiting to be deleted
-  int32_t pending_files_;
+
   uint64_t bytes_max_delete_chunk_;
   // Errors that happened in BackgroundEmptyTrash (file_path => error)
   std::map<std::string, Status> bg_errors_;
