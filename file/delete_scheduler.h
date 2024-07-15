@@ -78,12 +78,13 @@ class DeleteScheduler {
   }
 
   static const std::string kTrashExtension;
-  static bool IsTrashFile(const std::string& file_path);
+  static bool IsTrashFile(const std::string& file_path, DeleteScheduler* ds = nullptr);
 
   // Check if there are any .trash files in path, and schedule their deletion
   // Or delete immediately if sst_file_manager is nullptr
-  static Status CleanupDirectory(Env* env, SstFileManagerImpl* sfm,
-                                 const std::string& path);
+  Status CleanupDirectory(Env* env, const std::string& path) {
+    return CleanupDirectory(env, sst_file_manager_, path);}
+  static Status CleanupDirectory(Env* env, SstFileManagerImpl* sfm, const std::string& path);
 
   void SetStatisticsPtr(const std::shared_ptr<Statistics>& stats) {
     InstrumentedMutexLock l(&mu_);

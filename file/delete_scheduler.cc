@@ -137,10 +137,17 @@ std::map<std::string, Status> DeleteScheduler::GetBackgroundErrors() {
 }
 
 const std::string DeleteScheduler::kTrashExtension = ".trash";
-bool DeleteScheduler::IsTrashFile(const std::string& file_path) {
-  return (file_path.size() >= kTrashExtension.size() &&
-          file_path.rfind(kTrashExtension) ==
-              file_path.size() - kTrashExtension.size());
+bool DeleteScheduler::IsTrashFile(const std::string& file_path, DeleteScheduler* ds) {
+  if ((file_path.size() >= kTrashExtension.size() &&
+       file_path.rfind(kTrashExtension) ==
+       file_path.size() - kTrashExtension.size())) {
+    return true;
+  } else if (nullptr != ds) {
+    InstrumentedMutexLock l(&ds->mu_);
+    return ds->queue_.find(file_path) != ds->queue_.end();
+  }
+
+  return false;
 }
 
 Status DeleteScheduler::CleanupDirectory(Env* env, SstFileManagerImpl* sfm,
@@ -153,7 +160,7 @@ Status DeleteScheduler::CleanupDirectory(Env* env, SstFileManagerImpl* sfm,
     return s;
   }
   for (const std::string& current_file : files_in_path) {
-    if (!DeleteScheduler::IsTrashFile(current_file)) {
+    if (!IsTrashFile(current_file, sfm ? sfm->delete_scheduler() : nullptr)) {
       // not a trash file, skip
       continue;
     }
@@ -210,7 +217,7 @@ Status DeleteScheduler::MarkAsTrash(const std::string& file_path,
     return Status::InvalidArgument("file_path is corrupted");
   }
 
-  if (DeleteScheduler::IsTrashFile(file_path)) {
+  if (IsTrashFile(file_path, this)) {
     // This is already a trash file
     *trash_file = file_path;
     return Status::OK();
