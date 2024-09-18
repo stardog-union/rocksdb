@@ -870,36 +870,36 @@ jobs:
           command: cd fuzz && make sst_file_writer_fuzzer db_fuzzer db_map_fuzzer
       - post-steps
 
-  benchmark-linux: #use a private Circle CI runner (resource_class) to run the job
-    machine: true
-    resource_class: facebook/rocksdb-benchmark-sys1
-    steps:
-      - build-for-benchmarks
-      - perform-benchmarks
-      - post-benchmarks
+#  benchmark-linux: #use a private Circle CI runner (resource_class) to run the job
+#    machine: true
+#    resource_class: facebook/rocksdb-benchmark-sys1
+#    steps:
+#      - build-for-benchmarks
+#      - perform-benchmarks
+#      - post-benchmarks
 
-workflows: # Only jobs that haven't been successfully migrated to GitHub Actions
-  version: 2
-  jobs-linux-arm:
-    jobs:
-      - build-linux-arm
-  benchmark-linux:
-    triggers:
-      - schedule:
-          cron: "0 * * * *"
-          filters:
-            branches:
-              only:
-                - main
-    jobs:
-      - benchmark-linux
-  nightly:
-    triggers:
-      - schedule:
-          cron: "0 9 * * *"
-          filters:
-            branches:
-              only:
-                - main
-    jobs:
-      - build-linux-arm-test-full
+#workflows: # Only jobs that haven't been successfully migrated to GitHub Actions
+#  version: 2
+#  jobs-linux-arm:
+#    jobs:
+#      - build-linux-arm
+#  benchmark-linux:
+#    triggers:
+#      - schedule:
+#          cron: "0 * * * *"
+#          filters:
+#            branches:
+#              only:
+#                - main
+#    jobs:
+#      - benchmark-linux
+#  nightly:
+#    triggers:
+#      - schedule:
+#          cron: "0 9 * * *"
+#          filters:
+#            branches:
+#              only:
+#                - main
+#    jobs:
+#      - build-linux-arm-test-full
