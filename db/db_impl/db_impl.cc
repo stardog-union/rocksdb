@@ -1153,6 +1153,13 @@ void DBImpl::DumpStats() {
         continue;
       }
 
+      auto* table_factory =
+          cfd->GetCurrentMutableCFOptions()->table_factory.get();
+      assert(table_factory != nullptr);
+      // FIXME: need to a shared_ptr if/when block_cache is going to be mutable
+      Cache* cache =
+          table_factory->GetOptions<Cache>(TableFactory::kBlockCacheOpts());
+
       // Release DB mutex for gathering cache entry stats. Pass over all
       // column families for this first so that other stats are dumped
       // near-atomically.
@@ -1161,10 +1168,6 @@ void DBImpl::DumpStats() {
 
       // Probe block cache for problems (if not already via another CF)
       if (immutable_db_options_.info_log) {
-        auto* table_factory = cfd->ioptions()->table_factory.get();
-        assert(table_factory != nullptr);
-        Cache* cache =
-            table_factory->GetOptions<Cache>(TableFactory::kBlockCacheOpts());
         if (cache && probed_caches.insert(cache).second) {
           cache->ReportProblems(immutable_db_options_.info_log);
         }
@@ -3989,9 +3992,9 @@ std::unique_ptr<IterType> DBImpl::NewMultiCfIterator(
   if (!s.ok()) {
     return error_iterator_func(s);
   }
-  return std::make_unique<ImplType>(column_families[0]->GetComparator(),
-                                    column_families,
-                                    std::move(child_iterators));
+  return std::make_unique<ImplType>(
+      column_families[0]->GetComparator(), _read_options.allow_unprepared_value,
+      column_families, std::move(child_iterators));
 }
 
 Status DBImpl::NewIterators(
@@ -4295,8 +4298,8 @@ void DBImpl::ReleaseSnapshot(const Snapshot* s) {
     }
     // Avoid to go through every column family by checking a global threshold
     // first.
+    CfdList cf_scheduled;
     if (oldest_snapshot > bottommost_files_mark_threshold_) {
-      CfdList cf_scheduled;
       for (auto* cfd : *versions_->GetColumnFamilySet()) {
         if (!cfd->ioptions()->allow_ingest_behind) {
           cfd->current()->storage_info()->UpdateOldestSnapshot(
@@ -4327,6 +4330,24 @@ void DBImpl::ReleaseSnapshot(const Snapshot* s) {
             cfd->current()->storage_info()->bottommost_files_mark_threshold());
       }
       bottommost_files_mark_threshold_ = new_bottommost_files_mark_threshold;
+    }
+
+    // Avoid to go through every column family by checking a global threshold
+    // first.
+    if (oldest_snapshot >= standalone_range_deletion_files_mark_threshold_) {
+      for (auto* cfd : *versions_->GetColumnFamilySet()) {
+        if (cfd->IsDropped() || CfdListContains(cf_scheduled, cfd)) {
+          continue;
+        }
+        if (oldest_snapshot >=
+            cfd->current()
+                ->storage_info()
+                ->standalone_range_tombstone_files_mark_threshold()) {
+          EnqueuePendingCompaction(cfd);
+          MaybeScheduleFlushOrCompaction();
+          cf_scheduled.push_back(cfd);
+        }
+      }
     }
   }
   delete casted_s;
@@ -4775,6 +4796,24 @@ void DBImpl::ReleaseFileNumberFromPendingOutputs(
     std::unique_ptr<std::list<uint64_t>::iterator>& v) {
   if (v.get() != nullptr) {
     pending_outputs_.erase(*v.get());
+    v.reset();
+  }
+}
+
+std::list<uint64_t>::iterator DBImpl::CaptureOptionsFileNumber() {
+  // We need to remember the iterator of our insert, because after the
+  // compaction is done, we need to remove that element from
+  // min_options_file_numbers_.
+  min_options_file_numbers_.push_back(versions_->options_file_number());
+  auto min_options_file_numbers_inserted_elem = min_options_file_numbers_.end();
+  --min_options_file_numbers_inserted_elem;
+  return min_options_file_numbers_inserted_elem;
+}
+
+void DBImpl::ReleaseOptionsFileNumber(
+    std::unique_ptr<std::list<uint64_t>::iterator>& v) {
+  if (v.get() != nullptr) {
+    min_options_file_numbers_.erase(*v.get());
     v.reset();
   }
 }
@@ -5811,7 +5850,6 @@ Status DBImpl::IngestExternalFile(
 Status DBImpl::IngestExternalFiles(
     const std::vector<IngestExternalFileArg>& args) {
   // TODO: plumb Env::IOActivity, Env::IOPriority
-  const ReadOptions read_options;
   const WriteOptions write_options;
 
   if (args.empty()) {
@@ -5836,6 +5874,10 @@ Status DBImpl::IngestExternalFiles(
       char err_msg[128] = {0};
       snprintf(err_msg, 128, "external_files[%zu] is empty", i);
       return Status::InvalidArgument(err_msg);
+    }
+    if (i && args[i].options.fill_cache != args[i - 1].options.fill_cache) {
+      return Status::InvalidArgument(
+          "fill_cache should be the same across ingestion options.");
     }
   }
   for (const auto& arg : args) {
@@ -6024,6 +6066,8 @@ Status DBImpl::IngestExternalFiles(
       }
     }
     if (status.ok()) {
+      ReadOptions read_options;
+      read_options.fill_cache = args[0].options.fill_cache;
       autovector<ColumnFamilyData*> cfds_to_commit;
       autovector<const MutableCFOptions*> mutable_cf_options_list;
       autovector<autovector<VersionEdit*>> edit_lists;

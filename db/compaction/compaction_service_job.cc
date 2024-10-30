@@ -48,6 +48,14 @@ CompactionJob::ProcessKeyValueCompactionWithCompactionService(
   compaction_input.has_end = sub_compact->end.has_value();
   compaction_input.end =
       compaction_input.has_end ? sub_compact->end->ToString() : "";
+  compaction_input.options_file_number =
+      sub_compact->compaction->input_version()
+          ->version_set()
+          ->options_file_number();
+
+  TEST_SYNC_POINT_CALLBACK(
+      "CompactionServiceJob::ProcessKeyValueCompactionWithCompactionService",
+      &compaction_input);
 
   std::string compaction_input_binary;
   Status s = compaction_input.Write(&compaction_input_binary);
@@ -195,6 +203,8 @@ CompactionJob::ProcessKeyValueCompactionWithCompactionService(
     meta.oldest_ancester_time = file.oldest_ancester_time;
     meta.file_creation_time = file.file_creation_time;
     meta.epoch_number = file.epoch_number;
+    meta.file_checksum = file.file_checksum;
+    meta.file_checksum_func_name = file.file_checksum_func_name;
     meta.marked_for_compaction = file.marked_for_compaction;
     meta.unique_id = file.unique_id;
 
@@ -202,11 +212,14 @@ CompactionJob::ProcessKeyValueCompactionWithCompactionService(
     sub_compact->Current().AddOutput(std::move(meta),
                                      cfd->internal_comparator(), false, true,
                                      file.paranoid_hash);
+    sub_compact->Current().UpdateTableProperties(file.table_properties);
   }
   sub_compact->compaction_job_stats = compaction_result.stats;
   sub_compact->Current().SetNumOutputRecords(
-      compaction_result.num_output_records);
-  sub_compact->Current().SetTotalBytes(compaction_result.total_bytes);
+      compaction_result.stats.num_output_records);
+  sub_compact->Current().SetNumOutputFiles(
+      compaction_result.stats.num_output_files);
+  sub_compact->Current().AddBytesWritten(compaction_result.bytes_written);
   RecordTick(stats_, REMOTE_COMPACT_READ_BYTES, compaction_result.bytes_read);
   RecordTick(stats_, REMOTE_COMPACT_WRITE_BYTES,
              compaction_result.bytes_written);
@@ -224,6 +237,18 @@ void CompactionServiceCompactionJob::RecordCompactionIOStats() {
   compaction_result_->bytes_read += IOSTATS(bytes_read);
   compaction_result_->bytes_written += IOSTATS(bytes_written);
   CompactionJob::RecordCompactionIOStats();
+}
+
+void CompactionServiceCompactionJob::UpdateCompactionJobStats(
+    const InternalStats::CompactionStats& stats) const {
+  compaction_job_stats_->elapsed_micros = stats.micros;
+
+  // output information only in remote compaction
+  compaction_job_stats_->total_output_bytes = stats.bytes_written;
+  compaction_job_stats_->total_output_bytes_blob = stats.bytes_written_blob;
+  compaction_job_stats_->num_output_records = stats.num_output_records;
+  compaction_job_stats_->num_output_files = stats.num_output_files;
+  compaction_job_stats_->num_output_files_blob = stats.num_output_files_blob;
 }
 
 CompactionServiceCompactionJob::CompactionServiceCompactionJob(
@@ -280,6 +305,9 @@ Status CompactionServiceCompactionJob::Run() {
 
   log_buffer_->FlushBufferToLog();
   LogCompaction();
+
+  compaction_result_->stats.Reset();
+
   const uint64_t start_micros = db_options_.clock->NowMicros();
   c->GetOrInitInputTableProperties();
 
@@ -320,39 +348,48 @@ Status CompactionServiceCompactionJob::Run() {
   if (status.ok()) {
     status = io_s;
   }
-  if (status.ok()) {
-    // TODO: Add verify_table()
-  }
-
-  // Finish up all book-keeping to unify the subcompaction results
-  compact_->AggregateCompactionStats(compaction_stats_, *compaction_job_stats_);
-  UpdateCompactionStats();
-  RecordCompactionIOStats();
 
   LogFlush(db_options_.info_log);
   compact_->status = status;
   compact_->status.PermitUncheckedError();
 
-  // Build compaction result
+  // Build Compaction Job Stats
+
+  // 1. Aggregate CompactionOutputStats into Internal Compaction Stats
+  // (compaction_stats_) and aggregate Compaction Job Stats
+  // (compaction_job_stats_) from the sub compactions
+  compact_->AggregateCompactionStats(compaction_stats_, *compaction_job_stats_);
+
+  // 2. Update the Output information in the Compaction Job Stats with
+  // aggregated Internal Compaction Stats.
+  UpdateCompactionJobStats(compaction_stats_.stats);
+
+  // 3. Set fields that are not propagated as part of aggregations above
+  compaction_result_->stats.is_manual_compaction = c->is_manual_compaction();
+  compaction_result_->stats.is_full_compaction = c->is_full_compaction();
+  compaction_result_->stats.is_remote_compaction = true;
+
+  // 4. Update IO Stats that are not part of the aggregations above (bytes_read,
+  // bytes_written)
+  RecordCompactionIOStats();
+
+  // Build Output
   compaction_result_->output_level = compact_->compaction->output_level();
   compaction_result_->output_path = output_path_;
-  compaction_result_->stats.is_remote_compaction = true;
   for (const auto& output_file : sub_compact->GetOutputs()) {
     auto& meta = output_file.meta;
     compaction_result_->output_files.emplace_back(
         MakeTableFileName(meta.fd.GetNumber()), meta.fd.smallest_seqno,
         meta.fd.largest_seqno, meta.smallest.Encode().ToString(),
         meta.largest.Encode().ToString(), meta.oldest_ancester_time,
-        meta.file_creation_time, meta.epoch_number,
-        output_file.validator.GetHash(), meta.marked_for_compaction,
-        meta.unique_id);
+        meta.file_creation_time, meta.epoch_number, meta.file_checksum,
+        meta.file_checksum_func_name, output_file.validator.GetHash(),
+        meta.marked_for_compaction, meta.unique_id,
+        output_file.table_properties);
   }
-  InternalStats::CompactionStatsFull compaction_stats;
-  sub_compact->AggregateCompactionStats(compaction_stats);
-  compaction_result_->num_output_records =
-      compaction_stats.stats.num_output_records;
-  compaction_result_->total_bytes = compaction_stats.TotalBytesWritten();
 
+  TEST_SYNC_POINT_CALLBACK("CompactionServiceCompactionJob::Run:0",
+                           &compaction_result_);
   return status;
 }
 
@@ -435,6 +472,163 @@ static std::unordered_map<std::string, OptionTypeInfo> cs_input_type_info = {
     {"end",
      {offsetof(struct CompactionServiceInput, end), OptionType::kEncodedString,
       OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
+    {"options_file_number",
+     {offsetof(struct CompactionServiceInput, options_file_number),
+      OptionType::kUInt64T, OptionVerificationType::kNormal,
+      OptionTypeFlags::kNone}},
+};
+static std::unordered_map<std::string, OptionTypeInfo>
+    table_properties_type_info = {
+        {"orig_file_number",
+         {offsetof(struct TableProperties, orig_file_number),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"data_size",
+         {offsetof(struct TableProperties, data_size), OptionType::kUInt64T,
+          OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
+        {"index_size",
+         {offsetof(struct TableProperties, index_size), OptionType::kUInt64T,
+          OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
+        {"index_partitions",
+         {offsetof(struct TableProperties, index_partitions),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"top_level_index_size",
+         {offsetof(struct TableProperties, top_level_index_size),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"index_key_is_user_key",
+         {offsetof(struct TableProperties, index_key_is_user_key),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"index_value_is_delta_encoded",
+         {offsetof(struct TableProperties, index_value_is_delta_encoded),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"filter_size",
+         {offsetof(struct TableProperties, filter_size), OptionType::kUInt64T,
+          OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
+        {"raw_key_size",
+         {offsetof(struct TableProperties, raw_key_size), OptionType::kUInt64T,
+          OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
+        {"raw_value_size",
+         {offsetof(struct TableProperties, raw_value_size),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"num_data_blocks",
+         {offsetof(struct TableProperties, num_data_blocks),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"num_entries",
+         {offsetof(struct TableProperties, num_entries), OptionType::kUInt64T,
+          OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
+        {"num_filter_entries",
+         {offsetof(struct TableProperties, num_filter_entries),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"num_deletions",
+         {offsetof(struct TableProperties, num_deletions), OptionType::kUInt64T,
+          OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
+        {"num_merge_operands",
+         {offsetof(struct TableProperties, num_merge_operands),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"num_range_deletions",
+         {offsetof(struct TableProperties, num_range_deletions),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"format_version",
+         {offsetof(struct TableProperties, format_version),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"fixed_key_len",
+         {offsetof(struct TableProperties, fixed_key_len), OptionType::kUInt64T,
+          OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
+        {"column_family_id",
+         {offsetof(struct TableProperties, column_family_id),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"creation_time",
+         {offsetof(struct TableProperties, creation_time), OptionType::kUInt64T,
+          OptionVerificationType::kNormal, OptionTypeFlags::kNone}},
+        {"oldest_key_time",
+         {offsetof(struct TableProperties, oldest_key_time),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"file_creation_time",
+         {offsetof(struct TableProperties, file_creation_time),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"slow_compression_estimated_data_size",
+         {offsetof(struct TableProperties,
+                   slow_compression_estimated_data_size),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"fast_compression_estimated_data_size",
+         {offsetof(struct TableProperties,
+                   fast_compression_estimated_data_size),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"external_sst_file_global_seqno_offset",
+         {offsetof(struct TableProperties,
+                   external_sst_file_global_seqno_offset),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"tail_start_offset",
+         {offsetof(struct TableProperties, tail_start_offset),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"user_defined_timestamps_persisted",
+         {offsetof(struct TableProperties, user_defined_timestamps_persisted),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"key_largest_seqno",
+         {offsetof(struct TableProperties, key_largest_seqno),
+          OptionType::kUInt64T, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"db_id",
+         {offsetof(struct TableProperties, db_id), OptionType::kEncodedString}},
+        {"db_session_id",
+         {offsetof(struct TableProperties, db_session_id),
+          OptionType::kEncodedString}},
+        {"db_host_id",
+         {offsetof(struct TableProperties, db_host_id),
+          OptionType::kEncodedString}},
+        {"column_family_name",
+         {offsetof(struct TableProperties, column_family_name),
+          OptionType::kEncodedString}},
+        {"filter_policy_name",
+         {offsetof(struct TableProperties, filter_policy_name),
+          OptionType::kEncodedString}},
+        {"comparator_name",
+         {offsetof(struct TableProperties, comparator_name),
+          OptionType::kEncodedString}},
+        {"merge_operator_name",
+         {offsetof(struct TableProperties, merge_operator_name),
+          OptionType::kEncodedString}},
+        {"prefix_extractor_name",
+         {offsetof(struct TableProperties, prefix_extractor_name),
+          OptionType::kEncodedString}},
+        {"property_collectors_names",
+         {offsetof(struct TableProperties, property_collectors_names),
+          OptionType::kEncodedString}},
+        {"compression_name",
+         {offsetof(struct TableProperties, compression_name),
+          OptionType::kEncodedString}},
+        {"compression_options",
+         {offsetof(struct TableProperties, compression_options),
+          OptionType::kEncodedString}},
+        {"seqno_to_time_mapping",
+         {offsetof(struct TableProperties, seqno_to_time_mapping),
+          OptionType::kEncodedString}},
+        {"user_collected_properties",
+         OptionTypeInfo::StringMap(
+             offsetof(struct TableProperties, user_collected_properties),
+             OptionVerificationType::kNormal, OptionTypeFlags::kNone)},
+        {"readable_properties",
+         OptionTypeInfo::StringMap(
+             offsetof(struct TableProperties, readable_properties),
+             OptionVerificationType::kNormal, OptionTypeFlags::kNone)},
 };
 
 static std::unordered_map<std::string, OptionTypeInfo>
@@ -471,6 +665,14 @@ static std::unordered_map<std::string, OptionTypeInfo>
          {offsetof(struct CompactionServiceOutputFile, epoch_number),
           OptionType::kUInt64T, OptionVerificationType::kNormal,
           OptionTypeFlags::kNone}},
+        {"file_checksum",
+         {offsetof(struct CompactionServiceOutputFile, file_checksum),
+          OptionType::kEncodedString, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
+        {"file_checksum_func_name",
+         {offsetof(struct CompactionServiceOutputFile, file_checksum_func_name),
+          OptionType::kEncodedString, OptionVerificationType::kNormal,
+          OptionTypeFlags::kNone}},
         {"paranoid_hash",
          {offsetof(struct CompactionServiceOutputFile, paranoid_hash),
           OptionType::kUInt64T, OptionVerificationType::kNormal,
@@ -484,6 +686,11 @@ static std::unordered_map<std::string, OptionTypeInfo>
              offsetof(struct CompactionServiceOutputFile, unique_id),
              OptionVerificationType::kNormal, OptionTypeFlags::kNone,
              {0, OptionType::kUInt64T})},
+        {"table_properties",
+         OptionTypeInfo::Struct(
+             "table_properties", &table_properties_type_info,
+             offsetof(struct CompactionServiceOutputFile, table_properties),
+             OptionVerificationType::kNormal, OptionTypeFlags::kNone)},
 };
 
 static std::unordered_map<std::string, OptionTypeInfo>
@@ -702,14 +909,6 @@ static std::unordered_map<std::string, OptionTypeInfo> cs_result_type_info = {
     {"output_path",
      {offsetof(struct CompactionServiceResult, output_path),
       OptionType::kEncodedString, OptionVerificationType::kNormal,
-      OptionTypeFlags::kNone}},
-    {"num_output_records",
-     {offsetof(struct CompactionServiceResult, num_output_records),
-      OptionType::kUInt64T, OptionVerificationType::kNormal,
-      OptionTypeFlags::kNone}},
-    {"total_bytes",
-     {offsetof(struct CompactionServiceResult, total_bytes),
-      OptionType::kUInt64T, OptionVerificationType::kNormal,
       OptionTypeFlags::kNone}},
     {"bytes_read",
      {offsetof(struct CompactionServiceResult, bytes_read),

@@ -250,6 +250,7 @@ class CompactionJobTestBase : public testing::Test {
     } else {
       assert(false);
     }
+    mutable_cf_options_.table_factory = cf_options_.table_factory;
   }
 
   std::string GenerateFileName(uint64_t file_number) {
@@ -651,7 +652,8 @@ class CompactionJobTestBase : public testing::Test {
         mutable_cf_options_.target_file_size_base,
         mutable_cf_options_.max_compaction_bytes, 0, kNoCompression,
         cfd->GetLatestMutableCFOptions()->compression_opts,
-        Temperature::kUnknown, max_subcompactions, grandparents, true);
+        Temperature::kUnknown, max_subcompactions, grandparents,
+        /*earliest_snapshot*/ std::nullopt, /*snapshot_checker*/ nullptr, true);
     compaction.FinalizeInputInfo(cfd->current());
 
     assert(db_options_.info_log);
@@ -1656,20 +1658,44 @@ TEST_F(CompactionJobTest, ResultSerialization) {
   };
   result.status =
       status_list.at(rnd.Uniform(static_cast<int>(status_list.size())));
+
+  std::string file_checksum = rnd.RandomBinaryString(rnd.Uniform(kStrMaxLen));
+  std::string file_checksum_func_name = "MyAwesomeChecksumGenerator";
   while (!rnd.OneIn(10)) {
+    TableProperties tp;
+    tp.user_collected_properties.emplace(
+        "UCP_Key1", rnd.RandomString(rnd.Uniform(kStrMaxLen)));
+    tp.user_collected_properties.emplace(
+        "UCP_Key2", rnd.RandomString(rnd.Uniform(kStrMaxLen)));
+    tp.readable_properties.emplace("RP_Key1",
+                                   rnd.RandomString(rnd.Uniform(kStrMaxLen)));
+    tp.readable_properties.emplace("RP_K2y2",
+                                   rnd.RandomString(rnd.Uniform(kStrMaxLen)));
+
+    std::shared_ptr<const TableProperties> table_properties =
+        std::make_shared<const TableProperties>(tp);
+
     UniqueId64x2 id{rnd64.Uniform(UINT64_MAX), rnd64.Uniform(UINT64_MAX)};
     result.output_files.emplace_back(
-        rnd.RandomString(rnd.Uniform(kStrMaxLen)), rnd64.Uniform(UINT64_MAX),
-        rnd64.Uniform(UINT64_MAX),
-        rnd.RandomBinaryString(rnd.Uniform(kStrMaxLen)),
-        rnd.RandomBinaryString(rnd.Uniform(kStrMaxLen)),
-        rnd64.Uniform(UINT64_MAX), rnd64.Uniform(UINT64_MAX),
-        rnd64.Uniform(UINT64_MAX), rnd64.Uniform(UINT64_MAX), rnd.OneIn(2), id);
+        rnd.RandomString(rnd.Uniform(kStrMaxLen)) /* file_name */,
+        rnd64.Uniform(UINT64_MAX) /* smallest_seqno */,
+        rnd64.Uniform(UINT64_MAX) /* largest_seqno */,
+        rnd.RandomBinaryString(
+            rnd.Uniform(kStrMaxLen)) /* smallest_internal_key */,
+        rnd.RandomBinaryString(
+            rnd.Uniform(kStrMaxLen)) /* largest_internal_key */,
+        rnd64.Uniform(UINT64_MAX) /* oldest_ancester_time */,
+        rnd64.Uniform(UINT64_MAX) /* file_creation_time */,
+        rnd64.Uniform(UINT64_MAX) /* epoch_number */,
+        file_checksum /* file_checksum */,
+        file_checksum_func_name /* file_checksum_func_name */,
+        rnd64.Uniform(UINT64_MAX) /* paranoid_hash */,
+        rnd.OneIn(2) /* marked_for_compaction */, id /* unique_id */,
+        table_properties);
   }
   result.output_level = rnd.Uniform(10);
   result.output_path = rnd.RandomString(rnd.Uniform(kStrMaxLen));
-  result.num_output_records = rnd64.Uniform(UINT64_MAX);
-  result.total_bytes = rnd64.Uniform(UINT64_MAX);
+  result.stats.num_output_records = rnd64.Uniform(UINT64_MAX);
   result.bytes_read = 123;
   result.bytes_written = rnd64.Uniform(UINT64_MAX);
   result.stats.elapsed_micros = rnd64.Uniform(UINT64_MAX);
@@ -1686,6 +1712,21 @@ TEST_F(CompactionJobTest, ResultSerialization) {
   ASSERT_OK(CompactionServiceResult::Read(output, &deserialized1));
   ASSERT_TRUE(deserialized1.TEST_Equals(&result));
 
+  for (size_t i = 0; i < result.output_files.size(); i++) {
+    for (const auto& prop :
+         result.output_files[i].table_properties.user_collected_properties) {
+      ASSERT_EQ(deserialized1.output_files[i]
+                    .table_properties.user_collected_properties[prop.first],
+                prop.second);
+    }
+    for (const auto& prop :
+         result.output_files[i].table_properties.readable_properties) {
+      ASSERT_EQ(deserialized1.output_files[i]
+                    .table_properties.readable_properties[prop.first],
+                prop.second);
+    }
+  }
+
   // Test mismatch
   deserialized1.stats.num_input_files += 10;
   std::string mismatch;
@@ -1700,6 +1741,10 @@ TEST_F(CompactionJobTest, ResultSerialization) {
     ASSERT_FALSE(deserialized_tmp.TEST_Equals(&result, &mismatch));
     ASSERT_EQ(mismatch, "output_files.unique_id");
     deserialized_tmp.status.PermitUncheckedError();
+
+    ASSERT_EQ(deserialized_tmp.output_files[0].file_checksum, file_checksum);
+    ASSERT_EQ(deserialized_tmp.output_files[0].file_checksum_func_name,
+              file_checksum_func_name);
   }
 
   // Test unknown field

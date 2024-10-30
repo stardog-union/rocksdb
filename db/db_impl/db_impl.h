@@ -853,6 +853,8 @@ class DBImpl : public DB {
 
   uint64_t GetObsoleteSstFilesSize();
 
+  uint64_t MinOptionsFileNumberToKeep();
+
   // Returns the list of live files in 'live' and the list
   // of all files in the filesystem in 'candidate_files'.
   // If force == false and the last call was less than
@@ -1197,9 +1199,7 @@ class DBImpl : public DB {
 
   uint64_t TEST_total_log_size() const { return total_log_size_; }
 
-  // Returns column family name to ImmutableCFOptions map.
-  Status TEST_GetAllImmutableCFOptions(
-      std::unordered_map<std::string, const ImmutableCFOptions*>* iopts_map);
+  void TEST_GetAllBlockCaches(std::unordered_set<const Cache*>* cache_set);
 
   // Return the lastest MutableCFOptions of a column family
   Status TEST_GetLatestMutableCFOptions(ColumnFamilyHandle* column_family,
@@ -1694,6 +1694,8 @@ class DBImpl : public DB {
   friend class XFTransactionWriteHandler;
   friend class DBBlobIndexTest;
   friend class WriteUnpreparedTransactionTest_RecoveryTest_Test;
+  friend class CompactionServiceTest_PreservedOptionsLocalCompaction_Test;
+  friend class CompactionServiceTest_PreservedOptionsRemoteCompaction_Test;
 #endif
 
   struct CompactionState;
@@ -1965,6 +1967,12 @@ class DBImpl : public DB {
   void ReleaseFileNumberFromPendingOutputs(
       std::unique_ptr<std::list<uint64_t>::iterator>& v);
 
+  // Similar to pending_outputs, preserve OPTIONS file. Used for remote
+  // compaction.
+  std::list<uint64_t>::iterator CaptureOptionsFileNumber();
+  void ReleaseOptionsFileNumber(
+      std::unique_ptr<std::list<uint64_t>::iterator>& v);
+
   // Sets bg error if there is an error writing to WAL.
   IOStatus SyncClosedWals(const WriteOptions& write_options,
                           JobContext* job_context, VersionEdit* synced_wals,
@@ -2076,17 +2084,18 @@ class DBImpl : public DB {
   // memtable pending flush.
   // resuming_from_bg_err indicates whether the caller is attempting to resume
   // from background error.
-  Status WaitForFlushMemTable(ColumnFamilyData* cfd,
-                              const uint64_t* flush_memtable_id = nullptr,
-                              bool resuming_from_bg_err = false) {
+  Status WaitForFlushMemTable(
+      ColumnFamilyData* cfd, const uint64_t* flush_memtable_id = nullptr,
+      bool resuming_from_bg_err = false,
+      std::optional<FlushReason> flush_reason = std::nullopt) {
     return WaitForFlushMemTables({cfd}, {flush_memtable_id},
-                                 resuming_from_bg_err);
+                                 resuming_from_bg_err, flush_reason);
   }
   // Wait for memtables to be flushed for multiple column families.
   Status WaitForFlushMemTables(
       const autovector<ColumnFamilyData*>& cfds,
       const autovector<const uint64_t*>& flush_memtable_ids,
-      bool resuming_from_bg_err);
+      bool resuming_from_bg_err, std::optional<FlushReason> flush_reason);
 
   inline void WaitForPendingWrites() {
     mutex_.AssertHeld();
@@ -2755,6 +2764,11 @@ class DBImpl : public DB {
   // State is protected with db mutex.
   std::list<uint64_t> pending_outputs_;
 
+  // Similar to pending_outputs_, FindObsoleteFiles()/PurgeObsoleteFiles() never
+  // deletes any OPTIONS file that has number bigger than any of the file number
+  // in min_options_file_numbers_.
+  std::list<uint64_t> min_options_file_numbers_;
+
   // flush_queue_ and compaction_queue_ hold column families that we need to
   // flush and compact, respectively.
   // A column family is inserted into flush_queue_ when it satisfies condition
@@ -2876,6 +2890,11 @@ class DBImpl : public DB {
   // The min threshold to triggere bottommost compaction for removing
   // garbages, among all column families.
   SequenceNumber bottommost_files_mark_threshold_ = kMaxSequenceNumber;
+
+  // The min threshold to trigger compactions for standalone range deletion
+  // files that are marked for compaction.
+  SequenceNumber standalone_range_deletion_files_mark_threshold_ =
+      kMaxSequenceNumber;
 
   LogsWithPrepTracker logs_with_prep_tracker_;
 
