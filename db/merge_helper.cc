@@ -54,7 +54,7 @@ Status MergeHelper::TimedFullMerge(const MergeOperator* merge_operator,
                                    const Slice& key, const Slice* value,
                                    const std::vector<Slice>& operands,
                                    std::string* result, Logger* logger,
-                                   Statistics* statistics, SystemClock* clock,
+                                   Statistics* statistics, SystemClock* /*clock*/,
                                    Slice* result_operand,
                                    bool update_num_ops_stats) {
   assert(merge_operator != nullptr);
@@ -77,7 +77,7 @@ Status MergeHelper::TimedFullMerge(const MergeOperator* merge_operator,
   MergeOperator::MergeOperationOutput merge_out(*result, tmp_result_operand);
   {
     // Setup to time the merge
-    StopWatchNano timer(clock, statistics != nullptr);
+    //    StopWatchNano timer(clock, statistics != nullptr);
     PERF_TIMER_GUARD(merge_operator_time_nanos);
 
     // Do the merge
@@ -94,8 +94,8 @@ Status MergeHelper::TimedFullMerge(const MergeOperator* merge_operator,
       *result_operand = Slice(nullptr, 0);
     }
 
-    RecordTick(statistics, MERGE_OPERATION_TOTAL_TIME,
-               statistics ? timer.ElapsedNanos() : 0);
+    //    RecordTick(statistics, MERGE_OPERATION_TOTAL_TIME,
+    //           statistics ? timer.ElapsedNanos() : 0);
   }
 
   if (!success) {
@@ -349,15 +349,15 @@ Status MergeHelper::MergeUntil(InternalIterator* iter,
       bool merge_success = false;
       std::string merge_result;
       {
-        StopWatchNano timer(clock_, stats_ != nullptr);
+        //StopWatchNano timer(clock_, stats_ != nullptr);
         PERF_TIMER_GUARD(merge_operator_time_nanos);
         merge_success = user_merge_operator_->PartialMergeMulti(
             orig_ikey.user_key,
             std::deque<Slice>(merge_context_.GetOperands().begin(),
                               merge_context_.GetOperands().end()),
             &merge_result, logger_);
-        RecordTick(stats_, MERGE_OPERATION_TOTAL_TIME,
-                   stats_ ? timer.ElapsedNanosSafe() : 0);
+        //RecordTick(stats_, MERGE_OPERATION_TOTAL_TIME,
+        //           stats_ ? timer.ElapsedNanosSafe() : 0);
       }
       if (merge_success) {
         // Merging of operands (associative merge) was successful.
