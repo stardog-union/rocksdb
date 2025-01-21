@@ -6807,8 +6807,8 @@ class Benchmark {
 
     fprintf(stderr, "num reads to do %" PRIu64 "\n", reads_);
     Duration duration(FLAGS_duration, reads_);
-    uint64_t num_seek_to_first = 0;
-    uint64_t num_next = 0;
+    [[maybe_unused]] uint64_t num_seek_to_first = 0;
+    [[maybe_unused]] uint64_t num_next = 0;
     while (!duration.Done(1)) {
       if (!iter->Valid()) {
         iter->SeekToFirst();
