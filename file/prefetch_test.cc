@@ -168,7 +168,7 @@ TEST_P(PrefetchTest, Basic) {
   // count the keys
   {
     auto iter = std::unique_ptr<Iterator>(db_->NewIterator(ReadOptions()));
-    int num_keys = 0;
+    [[maybe_unused]] int num_keys = 0;
     for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
       num_keys++;
     }

@@ -570,7 +570,7 @@ class TestState {
 static void ConcurrentReader(void* arg) {
   TestState* state = reinterpret_cast<TestState*>(arg);
   Random rnd(state->seed_);
-  int64_t reads = 0;
+  [[maybe_unused]] int64_t reads = 0;
   state->Change(TestState::RUNNING);
   while (!state->quit_flag_.load(std::memory_order_acquire)) {
     state->t_.ReadStep(&rnd);
