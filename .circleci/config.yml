@@ -867,20 +867,7 @@ workflows:
   jobs-linux-other-checks:
     jobs:
       - build-linux-clang10-clang-analyze
-      - build-linux-unity-and-headers
       - build-linux-mini-crashtest
-  jobs-windows:
-    jobs:
-      - build-windows:
-          name: "build-windows-vs2019"
-      - build-windows:
-          name: "build-windows-vs2019-cxx20"
-          extra_cmake_opt: -DCMAKE_CXX_STANDARD=20
-      - build-windows:
-          name: "build-windows-vs2017"
-          vs_year: "2017"
-          cmake_generator: "Visual Studio 15 Win64"
-      - build-cmake-mingw
   jobs-java:
     jobs:
       - build-linux-java
