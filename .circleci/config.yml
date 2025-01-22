@@ -174,7 +174,7 @@ jobs:
   build-macos:
     macos:
       xcode: 13.4.1
-    resource_class: macos.m1.medium.gen1
+    resource_class: m2pro.medium
     environment:
       ROCKSDB_DISABLE_JEMALLOC: 1 # jemalloc cause env_test hang, disable it for now
     steps:
@@ -187,7 +187,7 @@ jobs:
   build-macos-cmake:
     macos:
       xcode: 13.4.1
-    resource_class: macos.m1.medium.gen1
+    resource_class: m2pro.medium
     parameters:
       run_even_tests:
         description: run even or odd tests, used to split tests to 2 groups
@@ -626,7 +626,7 @@ jobs:
   build-macos-java:
     macos:
       xcode: 13.4.1
-    resource_class: macos.m1.medium.gen1
+    resource_class: m2pro.medium
     environment:
       JAVA_HOME: /Library/Java/JavaVirtualMachines/liberica-jdk-8.jdk/Contents/Home
       ROCKSDB_DISABLE_JEMALLOC: 1 # jemalloc causes java 8 crash
@@ -650,7 +650,7 @@ jobs:
   build-macos-java-static:
     macos:
       xcode: 13.4.1
-    resource_class: macos.m1.medium.gen1
+    resource_class: m2pro.medium
     environment:
       JAVA_HOME: /Library/Java/JavaVirtualMachines/liberica-jdk-8.jdk/Contents/Home
     steps:
@@ -674,7 +674,7 @@ jobs:
   build-macos-java-static-universal:
     macos:
       xcode: 13.4.1
-    resource_class: macos.m1.medium.gen1
+    resource_class: m2pro.medium
     environment:
       JAVA_HOME: /Library/Java/JavaVirtualMachines/liberica-jdk-8.jdk/Contents/Home
     steps:
