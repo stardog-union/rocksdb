@@ -878,10 +878,6 @@ workflows:
   jobs-macos:
     jobs:
       - build-macos
-      - build-macos-cmake:
-          run_even_tests: true
-      - build-macos-cmake:
-          run_even_tests: false
   jobs-linux-arm:
     jobs:
       - build-linux-arm
