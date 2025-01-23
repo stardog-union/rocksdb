@@ -1704,6 +1704,7 @@ Status DBImpl::Flush(const FlushOptions& flush_options,
   ROCKS_LOG_INFO(immutable_db_options_.info_log, "[%s] Manual flush start.",
                  cfh->GetName().c_str());
   Status s;
+  cfh->imm.BeginManualOperation();
   if (immutable_db_options_.atomic_flush) {
     s = AtomicFlushMemTables({cfh->cfd()}, flush_options,
                              FlushReason::kManualFlush);
@@ -1711,6 +1712,7 @@ Status DBImpl::Flush(const FlushOptions& flush_options,
     s = FlushMemTable(cfh->cfd(), flush_options, FlushReason::kManualFlush);
   }
 
+  cfh->imm.CompleteManualOperation();
   ROCKS_LOG_INFO(immutable_db_options_.info_log,
                  "[%s] Manual flush finished, status: %s\n",
                  cfh->GetName().c_str(), s.ToString().c_str());
