@@ -391,11 +391,12 @@ class MemTableList {
   void RemoveOldMemTables(uint64_t log_number,
                           autovector<MemTable*>* to_delete);
 
-  void BeginManualOperation() {++active_manuals_;};
+  void BeginManualOperation() { ++active_manuals_; };
 
   void CompleteManualOperation() {
     assert(active_manuals_ >= 1);
-    --active_manuals_;};
+    --active_manuals_;
+  };
 
  private:
   friend Status InstallMemtableAtomicFlushResults(
