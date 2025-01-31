@@ -329,7 +329,8 @@ bool MemTableListVersion::TrimHistory(autovector<MemTable*>* to_delete,
 // not yet started.
 bool MemTableList::IsFlushPending() const {
   if ((flush_requested_ && num_flush_not_started_ > 0) ||
-      (num_flush_not_started_ >= min_write_buffer_number_to_merge_)) {
+      (num_flush_not_started_ >= min_write_buffer_number_to_merge_) ||
+      (active_manuals_ && num_flush_not_started_)) {
     assert(imm_flush_needed.load(std::memory_order_relaxed));
     return true;
   }
