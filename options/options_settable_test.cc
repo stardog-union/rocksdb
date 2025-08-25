@@ -518,6 +518,7 @@ TEST_F(OptionsSettableTest, ColumnFamilyOptionsAllFieldsSettable) {
       "blob_compression_type=kBZip2Compression;"
       "enable_blob_garbage_collection=true;"
       "blob_garbage_collection_age_cutoff=0.5;"
+      "file_preload=kFilePreloadWithPinning;"
       "blob_garbage_collection_force_threshold=0.75;"
       "blob_compaction_readahead_size=262144;"
       "bottommost_temperature=kWarm;"

@@ -90,6 +90,8 @@ struct OptionsHelper {
       compaction_style_string_map;
   static std::unordered_map<std::string, CompactionPri>
       compaction_pri_string_map;
+  static std::map<FilePreload, std::string> file_preload_to_string;
+  static std::unordered_map<std::string, FilePreload> file_preload_string_map;
   static std::unordered_map<std::string, Temperature> temperature_string_map;
 #endif  // !ROCKSDB_LITE
 };
@@ -100,6 +102,7 @@ static auto& compaction_style_to_string =
 static auto& compaction_pri_to_string = OptionsHelper::compaction_pri_to_string;
 static auto& compaction_stop_style_to_string =
     OptionsHelper::compaction_stop_style_to_string;
+static auto& file_preload_string_map = OptionsHelper::file_preload_string_map;
 static auto& temperature_to_string = OptionsHelper::temperature_to_string;
 static auto& checksum_type_string_map = OptionsHelper::checksum_type_string_map;
 #ifndef ROCKSDB_LITE
