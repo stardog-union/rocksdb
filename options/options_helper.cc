@@ -297,6 +297,7 @@ void UpdateColumnFamilyOptions(const ImmutableCFOptions& ioptions,
   cf_opts->num_levels = ioptions.num_levels;
   cf_opts->optimize_filters_for_hits = ioptions.optimize_filters_for_hits;
   cf_opts->force_consistency_checks = ioptions.force_consistency_checks;
+  cf_opts->file_preload = ioptions.file_preload;
   cf_opts->memtable_insert_with_hint_prefix_extractor =
       ioptions.memtable_insert_with_hint_prefix_extractor;
   cf_opts->cf_paths = ioptions.cf_paths;
@@ -433,6 +434,10 @@ static bool ParseOptionHelper(void* opt_address, const OptionType& opt_type,
       return ParseEnum<CompressionType>(
           compression_type_string_map, value,
           static_cast<CompressionType*>(opt_address));
+    case OptionType::kFilePreload:
+      return ParseEnum<FilePreload>(
+          file_preload_string_map, value,
+          reinterpret_cast<FilePreload*>(opt_address));
     case OptionType::kChecksumType:
       return ParseEnum<ChecksumType>(checksum_type_string_map, value,
                                      static_cast<ChecksumType*>(opt_address));
@@ -522,6 +527,10 @@ bool SerializeSingleOptionHelper(const void* opt_address,
           compression_type_string_map,
           *(static_cast<const CompressionType*>(opt_address)), value);
       break;
+    case OptionType::kFilePreload:
+      return SerializeEnum<FilePreload>(
+          file_preload_string_map,
+          *(reinterpret_cast<const FilePreload*>(opt_address)), value);
     case OptionType::kChecksumType:
       return SerializeEnum<ChecksumType>(
           checksum_type_string_map,
@@ -834,6 +843,17 @@ std::unordered_map<std::string, CompactionStopStyle>
     OptionsHelper::compaction_stop_style_string_map = {
         {"kCompactionStopStyleSimilarSize", kCompactionStopStyleSimilarSize},
         {"kCompactionStopStyleTotalSize", kCompactionStopStyleTotalSize}};
+
+std::map<FilePreload, std::string> OptionsHelper::file_preload_to_string = {
+    {FilePreload::kFilePreloadWithPinning, "kFilePreloadWithPinning"},
+    {FilePreload::kFilePreloadWithoutPinning, "kFilePreloadWithoutPinning"},
+    {FilePreload::kFilePreloadDisabled, "kFilePreloadDisabled"}};
+
+std::unordered_map<std::string, FilePreload>
+    OptionsHelper::file_preload_string_map = {
+        {"kFilePreloadWithPinning", FilePreload::kFilePreloadWithPinning},
+        {"kFilePreloadWithoutPinning", FilePreload::kFilePreloadWithoutPinning},
+        {"kFilePreloadDisabled", FilePreload::kFilePreloadDisabled}};
 
 std::unordered_map<std::string, Temperature>
     OptionsHelper::temperature_string_map = {
@@ -1206,6 +1226,8 @@ static bool AreOptionsEqual(OptionType type, const void* this_offset,
       return IsOptionEqual<CompactionPri>(this_offset, that_offset);
     case OptionType::kCompressionType:
       return IsOptionEqual<CompressionType>(this_offset, that_offset);
+    case OptionType::kFilePreload:
+      return IsOptionEqual<FilePreload>(this_offset, that_offset);
     case OptionType::kChecksumType:
       return IsOptionEqual<ChecksumType>(this_offset, that_offset);
     case OptionType::kEncodingType:

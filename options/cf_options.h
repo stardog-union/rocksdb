@@ -70,6 +70,8 @@ struct ImmutableCFOptions {
 
   bool force_consistency_checks;
 
+  FilePreload file_preload;
+
   std::shared_ptr<const SliceTransform>
       memtable_insert_with_hint_prefix_extractor;
 
