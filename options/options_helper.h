@@ -102,7 +102,6 @@ static auto& compaction_style_to_string =
 static auto& compaction_pri_to_string = OptionsHelper::compaction_pri_to_string;
 static auto& compaction_stop_style_to_string =
     OptionsHelper::compaction_stop_style_to_string;
-static auto& file_preload_string_map = OptionsHelper::file_preload_string_map;
 static auto& temperature_to_string = OptionsHelper::temperature_to_string;
 static auto& checksum_type_string_map = OptionsHelper::checksum_type_string_map;
 #ifndef ROCKSDB_LITE
@@ -115,6 +114,7 @@ static auto& compaction_style_string_map =
     OptionsHelper::compaction_style_string_map;
 static auto& compaction_pri_string_map =
     OptionsHelper::compaction_pri_string_map;
+static auto& file_preload_string_map = OptionsHelper::file_preload_string_map;
 static auto& temperature_string_map = OptionsHelper::temperature_string_map;
 #endif  // !ROCKSDB_LITE
 
