@@ -497,7 +497,8 @@ void ExternalSstFileIngestionJob::UpdateStats() {
         "(global_seqno=%" PRIu64 ")\n",
         f.external_file_path.c_str(), f.picked_level,
         f.internal_file_path.c_str(), f.assigned_seqno);
-    stream << "file" << f.internal_file_path << "level" << f.picked_level;
+    stream << "file" << f.internal_file_path << "level" << f.picked_level
+           << "file_size" << f.fd.GetFileSize();
   }
   stream.EndArray();
 
