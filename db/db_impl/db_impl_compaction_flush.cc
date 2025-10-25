@@ -1989,10 +1989,8 @@ Status DBImpl::FlushMemTable(ColumnFamilyData* cfd,
     }
   }
 
-  if (flush_reason == FlushReason::kManualCompaction ||
-      flush_reason == FlushReason::kManualFlush) {
-    cfd->imm()->BeginManualOperation();
-  }
+  cfd->imm()->BeginManualOperation(flush_reason);
+
   autovector<FlushRequest> flush_reqs;
   autovector<uint64_t> memtable_ids_to_wait;
   {
@@ -2111,10 +2109,9 @@ Status DBImpl::FlushMemTable(ColumnFamilyData* cfd,
       tmp_cfd->UnrefAndTryDelete();
     }
   }
-  if (flush_reason == FlushReason::kManualCompaction ||
-      flush_reason == FlushReason::kManualFlush) {
-    cfd->imm()->CompleteManualOperation();
-  }
+
+  cfd->imm()->CompleteManualOperation(flush_reason);
+
   TEST_SYNC_POINT("DBImpl::FlushMemTable:FlushMemTableFinished");
   return s;
 }

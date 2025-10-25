@@ -20,6 +20,7 @@
 #include "monitoring/instrumented_mutex.h"
 #include "rocksdb/db.h"
 #include "rocksdb/iterator.h"
+#include "rocksdb/listener.h"
 #include "rocksdb/options.h"
 #include "rocksdb/types.h"
 #include "util/autovector.h"
@@ -391,11 +392,17 @@ class MemTableList {
   void RemoveOldMemTables(uint64_t log_number,
                           autovector<MemTable*>* to_delete);
 
-  void BeginManualOperation() { ++active_manuals_; };
+  void BeginManualOperation(FlushReason flush_reason) {
+    if (NeedsSingleMemFlush(flush_reason)) {
+      ++active_manuals_;
+    } // if
+  };
 
-  void CompleteManualOperation() {
+  void CompleteManualOperation(FlushReason flush_reason) {
     assert(active_manuals_ >= 1);
-    --active_manuals_;
+    if (NeedsSingleMemFlush(flush_reason)) {
+      --active_manuals_;
+    } // if
   };
 
  private:
@@ -413,6 +420,22 @@ class MemTableList {
 
   // DB mutex held
   void InstallNewVersion();
+
+  bool NeedsSingleMemFlush(FlushReason flush_reason) {
+    bool ret_flag{false};
+
+    ret_flag = FlushReason::kGetLiveFiles == flush_reason
+               || FlushReason::kShutDown == flush_reason
+               || FlushReason::kExternalFileIngestion == flush_reason
+               || FlushReason::kManualCompaction == flush_reason
+               || FlushReason::kDeleteFiles == flush_reason
+               || FlushReason::kManualFlush == flush_reason
+               || FlushReason::kErrorRecovery == flush_reason
+               || FlushReason::kErrorRecoveryRetryFlush == flush_reason
+               || FlushReason::kWalFull == flush_reason;
+
+    return ret_flag;
+  }
 
   // DB mutex held
   // Called after writing to MANIFEST
