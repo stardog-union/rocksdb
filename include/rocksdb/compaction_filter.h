@@ -57,10 +57,15 @@ class CompactionFilter : public Customizable {
     // Whether this table file is created as part of a compaction requested by
     // the client.
     bool is_manual_compaction;
+    // The lowest level among all the input files (if any) used in table
+    // creation
+    int input_start_level = kUnknownStartLevel;
     // The column family that will contain the created table file.
     uint32_t column_family_id;
     // Reason this table file is being created.
     TableFileCreationReason reason;
+
+    static const int kUnknownStartLevel = -1;
   };
 
   virtual ~CompactionFilter() {}
